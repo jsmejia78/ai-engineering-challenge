@@ -591,7 +591,7 @@ export default function App() {
             />
             <button 
               type="submit" 
-              disabled={loading || !userMessage.trim()} 
+              disabled={loading || !userMessage.trim() || !apiKey.trim()} 
               style={{ 
                 padding: "0.875rem 1.5rem", 
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
@@ -602,7 +602,8 @@ export default function App() {
                 fontWeight: "600",
                 fontSize: "1rem",
                 transition: "all 0.2s ease",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                opacity: (loading || !userMessage.trim() || !apiKey.trim()) ? 0.5 : 1
               }}
               onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
               onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
