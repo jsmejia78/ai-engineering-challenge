@@ -97,7 +97,104 @@ export default function App() {
     setError("");
   };
 
-  // Custom styles for markdown components
+  // Function to convert LaTeX math expressions to HTML
+  const convertLatexToHtml = (text) => {
+    return text
+      // Handle fractions: \frac{numerator}{denominator}
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span style="display: inline-block; text-align: center; vertical-align: middle; margin: 0 2px;"><span style="display: block; border-bottom: 1px solid #000; padding: 0 2px;">$1</span><span style="display: block; padding: 0 2px;">$2</span></span>')
+      // Handle simple fractions: \frac{a}{b}
+      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span style="display: inline-block; text-align: center; vertical-align: middle; margin: 0 2px;"><span style="display: block; border-bottom: 1px solid #000; padding: 0 2px;">$1</span><span style="display: block; padding: 0 2px;">$2</span></span>')
+      // Handle square roots: \sqrt{expression}
+      .replace(/\\sqrt\{([^}]+)\}/g, '√<span style="text-decoration: overline;">$1</span>')
+      // Handle superscripts: ^{expression}
+      .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
+      // Handle subscripts: _{expression}
+      .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
+      // Handle simple superscripts: ^2, ^3, etc.
+      .replace(/\^(\d+)/g, '<sup>$1</sup>')
+      // Handle simple subscripts: _1, _2, etc.
+      .replace(/_(\d+)/g, '<sub>$1</sub>')
+      // Handle multiplication symbol
+      .replace(/\\times/g, '×')
+      // Handle division symbol
+      .replace(/\\div/g, '÷')
+      // Handle plus-minus symbol
+      .replace(/\\pm/g, '±')
+      // Handle less than or equal
+      .replace(/\\leq/g, '≤')
+      // Handle greater than or equal
+      .replace(/\\geq/g, '≥')
+      // Handle not equal
+      .replace(/\\neq/g, '≠')
+      // Handle infinity
+      .replace(/\\infty/g, '∞')
+      // Handle pi
+      .replace(/\\pi/g, 'π')
+      // Handle theta
+      .replace(/\\theta/g, 'θ')
+      // Handle alpha
+      .replace(/\\alpha/g, 'α')
+      // Handle beta
+      .replace(/\\beta/g, 'β')
+      // Handle gamma
+      .replace(/\\gamma/g, 'γ')
+      // Handle delta
+      .replace(/\\delta/g, 'δ')
+      // Handle epsilon
+      .replace(/\\epsilon/g, 'ε')
+      // Handle mu
+      .replace(/\\mu/g, 'μ')
+      // Handle sigma
+      .replace(/\\sigma/g, 'σ')
+      // Handle sum
+      .replace(/\\sum/g, '∑')
+      // Handle integral
+      .replace(/\\int/g, '∫')
+      // Handle partial derivative
+      .replace(/\\partial/g, '∂')
+      // Handle nabla
+      .replace(/\\nabla/g, '∇')
+      // Handle arrow
+      .replace(/\\rightarrow/g, '→')
+      // Handle left arrow
+      .replace(/\\leftarrow/g, '←')
+      // Handle up arrow
+      .replace(/\\uparrow/g, '↑')
+      // Handle down arrow
+      .replace(/\\downarrow/g, '↓')
+      // Handle left-right arrow
+      .replace(/\\leftrightarrow/g, '↔')
+      // Handle implies
+      .replace(/\\implies/g, '⇒')
+      // Handle if and only if
+      .replace(/\\iff/g, '⇔')
+      // Handle element of
+      .replace(/\\in/g, '∈')
+      // Handle not element of
+      .replace(/\\notin/g, '∉')
+      // Handle subset
+      .replace(/\\subset/g, '⊂')
+      // Handle superset
+      .replace(/\\supset/g, '⊃')
+      // Handle union
+      .replace(/\\cup/g, '∪')
+      // Handle intersection
+      .replace(/\\cap/g, '∩')
+      // Handle empty set
+      .replace(/\\emptyset/g, '∅')
+      // Handle natural numbers
+      .replace(/\\mathbb\{N\}/g, 'ℕ')
+      // Handle integers
+      .replace(/\\mathbb\{Z\}/g, 'ℤ')
+      // Handle rational numbers
+      .replace(/\\mathbb\{Q\}/g, 'ℚ')
+      // Handle real numbers
+      .replace(/\\mathbb\{R\}/g, 'ℝ')
+      // Handle complex numbers
+      .replace(/\\mathbb\{C\}/g, 'ℂ');
+  };
+
+  // Custom styles for markdown components with tighter spacing
   const markdownComponents = {
     // Code blocks
     code: ({ node, inline, className, children, ...props }) => {
@@ -106,12 +203,12 @@ export default function App() {
         <pre style={{
           background: '#1f2937',
           color: '#f9fafb',
-          padding: '1rem',
-          borderRadius: '8px',
+          padding: '0.75rem',
+          borderRadius: '6px',
           overflow: 'auto',
-          margin: '0.5rem 0',
+          margin: '0.25rem 0',
           fontSize: '0.875rem',
-          lineHeight: '1.5'
+          lineHeight: '1.4'
         }}>
           <code className={className} {...props}>
             {children}
@@ -130,14 +227,14 @@ export default function App() {
         </code>
       );
     },
-    // Headers
-    h1: ({ children }) => <h1 style={{ fontSize: '1.5rem', fontWeight: '600', margin: '1rem 0 0.5rem 0', color: '#111827' }}>{children}</h1>,
-    h2: ({ children }) => <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: '0.75rem 0 0.5rem 0', color: '#111827' }}>{children}</h2>,
-    h3: ({ children }) => <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: '0.5rem 0 0.25rem 0', color: '#111827' }}>{children}</h3>,
-    // Lists
-    ul: ({ children }) => <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>{children}</ul>,
-    ol: ({ children }) => <ol style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>{children}</ol>,
-    li: ({ children }) => <li style={{ margin: '0.25rem 0' }}>{children}</li>,
+    // Headers with tighter spacing
+    h1: ({ children }) => <h1 style={{ fontSize: '1.25rem', fontWeight: '600', margin: '0.5rem 0 0.25rem 0', color: '#111827' }}>{children}</h1>,
+    h2: ({ children }) => <h2 style={{ fontSize: '1.125rem', fontWeight: '600', margin: '0.375rem 0 0.25rem 0', color: '#111827' }}>{children}</h2>,
+    h3: ({ children }) => <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: '0.25rem 0 0.125rem 0', color: '#111827' }}>{children}</h3>,
+    // Lists with tighter spacing
+    ul: ({ children }) => <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>{children}</ul>,
+    ol: ({ children }) => <ol style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>{children}</ol>,
+    li: ({ children }) => <li style={{ margin: '0.125rem 0' }}>{children}</li>,
     // Links
     a: ({ href, children }) => (
       <a 
@@ -153,12 +250,12 @@ export default function App() {
         {children}
       </a>
     ),
-    // Blockquotes
+    // Blockquotes with tighter spacing
     blockquote: ({ children }) => (
       <blockquote style={{
-        borderLeft: '4px solid #3b82f6',
-        margin: '0.5rem 0',
-        padding: '0.5rem 1rem',
+        borderLeft: '3px solid #3b82f6',
+        margin: '0.25rem 0',
+        padding: '0.25rem 0.75rem',
         background: '#f8fafc',
         borderRadius: '0 4px 4px 0',
         fontStyle: 'italic'
@@ -166,9 +263,9 @@ export default function App() {
         {children}
       </blockquote>
     ),
-    // Tables
+    // Tables with tighter spacing
     table: ({ children }) => (
-      <div style={{ overflow: 'auto', margin: '0.5rem 0' }}>
+      <div style={{ overflow: 'auto', margin: '0.25rem 0' }}>
         <table style={{
           borderCollapse: 'collapse',
           width: '100%',
@@ -181,7 +278,7 @@ export default function App() {
     th: ({ children }) => (
       <th style={{
         border: '1px solid #d1d5db',
-        padding: '0.5rem',
+        padding: '0.375rem',
         background: '#f9fafb',
         fontWeight: '600',
         textAlign: 'left'
@@ -192,13 +289,13 @@ export default function App() {
     td: ({ children }) => (
       <td style={{
         border: '1px solid #d1d5db',
-        padding: '0.5rem'
+        padding: '0.375rem'
       }}>
         {children}
       </td>
     ),
-    // Paragraphs
-    p: ({ children }) => <p style={{ margin: '0.5rem 0', lineHeight: '1.6' }}>{children}</p>,
+    // Paragraphs with tighter spacing
+    p: ({ children }) => <p style={{ margin: '0.25rem 0', lineHeight: '1.4' }}>{children}</p>,
     // Strong text
     strong: ({ children }) => <strong style={{ fontWeight: '600' }}>{children}</strong>,
     // Emphasis
@@ -360,13 +457,13 @@ export default function App() {
                 ) : (
                   <div style={{ 
                     fontSize: "0.875rem",
-                    lineHeight: "1.6"
+                    lineHeight: "1.4"
                   }}>
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={markdownComponents}
                     >
-                      {message.content}
+                      {convertLatexToHtml(message.content)}
                     </ReactMarkdown>
                     {loading && index === conversation.length - 1 && (
                       <span style={{ opacity: 0.7 }}>...</span>
