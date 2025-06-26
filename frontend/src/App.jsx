@@ -9,8 +9,12 @@ import 'katex/dist/katex.min.css';
 const transformBracketMath = (text) => {
   if (!text) return text;
   
-  // Transform any [ ... ] to $ ... $
-  return text.replace(/\[\s*([^\[\]]*)\s*\]/g, '$$1$');
+  // Transform [ ... ] to $ ... $ with precise spacing
+  return text.replace(/\[\s*([^\[\]]*?)\s*\]/g, (match, captured) => {
+    // Remove all leading and trailing spaces from the captured content
+    const cleanContent = captured.trim();
+    return `$${cleanContent}$`;
+  });
 };
 
 // Simple error boundary component
