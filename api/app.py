@@ -29,6 +29,7 @@ class ChatRequest(BaseModel):
     user_message: str      # Message from the user
     model: Optional[str] = "gpt-4.1-mini"  # Optional model selection with default
     api_key: str          # OpenAI API key for authentication
+    temperature: Optional[float] = 0.7  # Temperature for controlling creativity (0-2)
 
 # Define the main chat endpoint that handles POST requests
 @app.post("/api/chat")
@@ -44,12 +45,14 @@ async def chat(request: ChatRequest):
                 model=request.model,
                 messages=[
                     {"role": "system", "content": request.system_message},
+                    {"role": "system", "content": "Do not produce answers greater than 500 words"},
                     {"role": "system", "content": "Use $...$ for inline math and $$...$$ for block math. Do not use square brackets [ ... ] for mathematical expressions. Remove any spaces between the closing $ and the content of the expression."},
                     {"role": "user", "content": request.user_message}
                 ],
-                stream=True  # Enable streaming response
+                stream=True,  # Enable streaming response
+                temperature=request.temperature
             )
-            
+
             # Yield each chunk of the response as it becomes available
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:

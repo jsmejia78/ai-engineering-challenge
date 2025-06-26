@@ -71,6 +71,7 @@ export default function App() {
   const [userMessage, setUserMessage] = useState("");
   const [model, setModel] = useState("gpt-4.1-mini");
   const [apiKey, setApiKey] = useState("");
+  const [temperature, setTemperature] = useState(0.7); // Default temperature
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -139,6 +140,7 @@ export default function App() {
           user_message: currentUserMessage,
           model,
           api_key: apiKey,
+          temperature,
         }),
       });
       
@@ -348,7 +350,8 @@ export default function App() {
           background: "#f8fafc",
           display: "flex",
           gap: "0.75rem",
-          flexWrap: "wrap"
+          flexWrap: "wrap",
+          alignItems: "center"
         }}>
           <input
             type="text"
@@ -393,6 +396,53 @@ export default function App() {
               background: "#fff"
             }}
           />
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            alignItems: "center",
+            gap: "0.25rem"
+          }}>
+            <label style={{ 
+              fontSize: "0.75rem", 
+              color: "#64748b", 
+              fontWeight: "500"
+            }}>
+              Model Temperature: {temperature}
+            </label>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center",
+              gap: "0.5rem",
+              width: "200px"
+            }}>
+              <span style={{ 
+                fontSize: "0.625rem", 
+                color: "#94a3b8",
+                whiteSpace: "nowrap"
+              }}>
+                Less Creative
+              </span>
+              <input
+                type="range"
+                min="0.2"
+                max="1.2"
+                step="0.1"
+                value={temperature}
+                onChange={e => setTemperature(Number(e.target.value))}
+                style={{
+                  flex: 1,
+                  cursor: "pointer"
+                }}
+              />
+              <span style={{ 
+                fontSize: "0.625rem", 
+                color: "#94a3b8",
+                whiteSpace: "nowrap"
+              }}>
+                More Creative
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Chat Messages */}
