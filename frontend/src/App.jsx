@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function App() {
   // State for form fields
@@ -93,6 +95,114 @@ export default function App() {
   const clearConversation = () => {
     setConversation([]);
     setError("");
+  };
+
+  // Custom styles for markdown components
+  const markdownComponents = {
+    // Code blocks
+    code: ({ node, inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline ? (
+        <pre style={{
+          background: '#1f2937',
+          color: '#f9fafb',
+          padding: '1rem',
+          borderRadius: '8px',
+          overflow: 'auto',
+          margin: '0.5rem 0',
+          fontSize: '0.875rem',
+          lineHeight: '1.5'
+        }}>
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      ) : (
+        <code style={{
+          background: '#f3f4f6',
+          color: '#dc2626',
+          padding: '0.125rem 0.25rem',
+          borderRadius: '4px',
+          fontSize: '0.875em',
+          fontFamily: 'monospace'
+        }} {...props}>
+          {children}
+        </code>
+      );
+    },
+    // Headers
+    h1: ({ children }) => <h1 style={{ fontSize: '1.5rem', fontWeight: '600', margin: '1rem 0 0.5rem 0', color: '#111827' }}>{children}</h1>,
+    h2: ({ children }) => <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: '0.75rem 0 0.5rem 0', color: '#111827' }}>{children}</h2>,
+    h3: ({ children }) => <h3 style={{ fontSize: '1.125rem', fontWeight: '600', margin: '0.5rem 0 0.25rem 0', color: '#111827' }}>{children}</h3>,
+    // Lists
+    ul: ({ children }) => <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>{children}</ul>,
+    ol: ({ children }) => <ol style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>{children}</ol>,
+    li: ({ children }) => <li style={{ margin: '0.25rem 0' }}>{children}</li>,
+    // Links
+    a: ({ href, children }) => (
+      <a 
+        href={href} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{ 
+          color: '#3b82f6', 
+          textDecoration: 'underline',
+          wordBreak: 'break-word'
+        }}
+      >
+        {children}
+      </a>
+    ),
+    // Blockquotes
+    blockquote: ({ children }) => (
+      <blockquote style={{
+        borderLeft: '4px solid #3b82f6',
+        margin: '0.5rem 0',
+        padding: '0.5rem 1rem',
+        background: '#f8fafc',
+        borderRadius: '0 4px 4px 0',
+        fontStyle: 'italic'
+      }}>
+        {children}
+      </blockquote>
+    ),
+    // Tables
+    table: ({ children }) => (
+      <div style={{ overflow: 'auto', margin: '0.5rem 0' }}>
+        <table style={{
+          borderCollapse: 'collapse',
+          width: '100%',
+          fontSize: '0.875rem'
+        }}>
+          {children}
+        </table>
+      </div>
+    ),
+    th: ({ children }) => (
+      <th style={{
+        border: '1px solid #d1d5db',
+        padding: '0.5rem',
+        background: '#f9fafb',
+        fontWeight: '600',
+        textAlign: 'left'
+      }}>
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td style={{
+        border: '1px solid #d1d5db',
+        padding: '0.5rem'
+      }}>
+        {children}
+      </td>
+    ),
+    // Paragraphs
+    p: ({ children }) => <p style={{ margin: '0.5rem 0', lineHeight: '1.6' }}>{children}</p>,
+    // Strong text
+    strong: ({ children }) => <strong style={{ fontWeight: '600' }}>{children}</strong>,
+    // Emphasis
+    em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
   };
 
   return (
@@ -245,9 +355,23 @@ export default function App() {
                 }}>
                   {message.type === "user" ? "You" : "AI Assistant"}
                 </div>
-                {message.content}
-                {message.type === "assistant" && loading && index === conversation.length - 1 && (
-                  <span style={{ opacity: 0.7 }}>...</span>
+                {message.type === "user" ? (
+                  <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
+                ) : (
+                  <div style={{ 
+                    fontSize: "0.875rem",
+                    lineHeight: "1.6"
+                  }}>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                    {loading && index === conversation.length - 1 && (
+                      <span style={{ opacity: 0.7 }}>...</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
