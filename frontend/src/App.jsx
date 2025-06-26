@@ -234,7 +234,7 @@ export default function App() {
     // Lists with tighter spacing
     ul: ({ children }) => <ul style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>{children}</ul>,
     ol: ({ children }) => <ol style={{ margin: '0.25rem 0', paddingLeft: '1.25rem' }}>{children}</ol>,
-    li: ({ children }) => <li style={{ margin: '0.125rem 0' }}>{children}</li>,
+    li: ({ children }) => <li style={{ margin: '0.125rem 0', display: 'list-item', whiteSpace: 'normal' }}>{children}</li>,
     // Links
     a: ({ href, children }) => (
       <a 
