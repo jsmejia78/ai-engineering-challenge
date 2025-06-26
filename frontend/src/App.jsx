@@ -1,6 +1,65 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import 'katex/dist/katex.min.css';
+
+// Function to transform bracket-wrapped LaTeX expressions
+const transformBracketMath = (text) => {
+  if (!text) return text;
+  
+  // Transform any [ ... ] to $ ... $
+  return text.replace(/\[\s*([^\[\]]*)\s*\]/g, '$$1$');
+};
+
+// Simple error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          padding: "1rem", 
+          background: "#fef2f2", 
+          color: "#dc2626", 
+          borderRadius: "8px",
+          margin: "1rem"
+        }}>
+          <h3>Something went wrong</h3>
+          <p>Please refresh the page and try again.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer"
+            }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 export default function App() {
   // State for form fields
@@ -19,11 +78,30 @@ export default function App() {
   
   // Ref for auto-scrolling to latest message
   const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatEndRef.current && chatContainerRef.current) {
+      // Use a more reliable scroll method
+      const scrollToBottom = () => {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      };
+      
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(scrollToBottom);
+    }
   }, [conversation]);
+
+  // Force scroll to bottom when loading state changes
+  useEffect(() => {
+    if (chatEndRef.current && chatContainerRef.current) {
+      const scrollToBottom = () => {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      };
+      requestAnimationFrame(scrollToBottom);
+    }
+  }, [loading]);
 
   // Health check on mount
   React.useEffect(() => {
@@ -59,6 +137,11 @@ export default function App() {
           api_key: apiKey,
         }),
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       if (!res.body) throw new Error("No response body");
       const reader = res.body.getReader();
       let result = "";
@@ -75,15 +158,18 @@ export default function App() {
         // Update the assistant message content
         setConversation(prev => {
           const newConversation = [...prev];
-          newConversation[newConversation.length - 1] = {
-            ...newConversation[newConversation.length - 1],
-            content: result
-          };
+          if (newConversation.length > 0) {
+            newConversation[newConversation.length - 1] = {
+              ...newConversation[newConversation.length - 1],
+              content: result
+            };
+          }
           return newConversation;
         });
       }
     } catch (err) {
-      setError(err.message || "Unknown error");
+      console.error('Chat error:', err);
+      setError(err.message || "Unknown error occurred");
       // Remove the assistant message if there was an error
       setConversation(prev => prev.slice(0, -1));
     } finally {
@@ -95,103 +181,6 @@ export default function App() {
   const clearConversation = () => {
     setConversation([]);
     setError("");
-  };
-
-  // Function to convert LaTeX math expressions to HTML
-  const convertLatexToHtml = (text) => {
-    return text
-      // Handle fractions: \frac{numerator}{denominator}
-      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span style="display: inline-block; text-align: center; vertical-align: middle; margin: 0 2px;"><span style="display: block; border-bottom: 1px solid #000; padding: 0 2px;">$1</span><span style="display: block; padding: 0 2px;">$2</span></span>')
-      // Handle simple fractions: \frac{a}{b}
-      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span style="display: inline-block; text-align: center; vertical-align: middle; margin: 0 2px;"><span style="display: block; border-bottom: 1px solid #000; padding: 0 2px;">$1</span><span style="display: block; padding: 0 2px;">$2</span></span>')
-      // Handle square roots: \sqrt{expression}
-      .replace(/\\sqrt\{([^}]+)\}/g, '√<span style="text-decoration: overline;">$1</span>')
-      // Handle superscripts: ^{expression}
-      .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
-      // Handle subscripts: _{expression}
-      .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
-      // Handle simple superscripts: ^2, ^3, etc.
-      .replace(/\^(\d+)/g, '<sup>$1</sup>')
-      // Handle simple subscripts: _1, _2, etc.
-      .replace(/_(\d+)/g, '<sub>$1</sub>')
-      // Handle multiplication symbol
-      .replace(/\\times/g, '×')
-      // Handle division symbol
-      .replace(/\\div/g, '÷')
-      // Handle plus-minus symbol
-      .replace(/\\pm/g, '±')
-      // Handle less than or equal
-      .replace(/\\leq/g, '≤')
-      // Handle greater than or equal
-      .replace(/\\geq/g, '≥')
-      // Handle not equal
-      .replace(/\\neq/g, '≠')
-      // Handle infinity
-      .replace(/\\infty/g, '∞')
-      // Handle pi
-      .replace(/\\pi/g, 'π')
-      // Handle theta
-      .replace(/\\theta/g, 'θ')
-      // Handle alpha
-      .replace(/\\alpha/g, 'α')
-      // Handle beta
-      .replace(/\\beta/g, 'β')
-      // Handle gamma
-      .replace(/\\gamma/g, 'γ')
-      // Handle delta
-      .replace(/\\delta/g, 'δ')
-      // Handle epsilon
-      .replace(/\\epsilon/g, 'ε')
-      // Handle mu
-      .replace(/\\mu/g, 'μ')
-      // Handle sigma
-      .replace(/\\sigma/g, 'σ')
-      // Handle sum
-      .replace(/\\sum/g, '∑')
-      // Handle integral
-      .replace(/\\int/g, '∫')
-      // Handle partial derivative
-      .replace(/\\partial/g, '∂')
-      // Handle nabla
-      .replace(/\\nabla/g, '∇')
-      // Handle arrow
-      .replace(/\\rightarrow/g, '→')
-      // Handle left arrow
-      .replace(/\\leftarrow/g, '←')
-      // Handle up arrow
-      .replace(/\\uparrow/g, '↑')
-      // Handle down arrow
-      .replace(/\\downarrow/g, '↓')
-      // Handle left-right arrow
-      .replace(/\\leftrightarrow/g, '↔')
-      // Handle implies
-      .replace(/\\implies/g, '⇒')
-      // Handle if and only if
-      .replace(/\\iff/g, '⇔')
-      // Handle element of
-      .replace(/\\in/g, '∈')
-      // Handle not element of
-      .replace(/\\notin/g, '∉')
-      // Handle subset
-      .replace(/\\subset/g, '⊂')
-      // Handle superset
-      .replace(/\\supset/g, '⊃')
-      // Handle union
-      .replace(/\\cup/g, '∪')
-      // Handle intersection
-      .replace(/\\cap/g, '∩')
-      // Handle empty set
-      .replace(/\\emptyset/g, '∅')
-      // Handle natural numbers
-      .replace(/\\mathbb\{N\}/g, 'ℕ')
-      // Handle integers
-      .replace(/\\mathbb\{Z\}/g, 'ℤ')
-      // Handle rational numbers
-      .replace(/\\mathbb\{Q\}/g, 'ℚ')
-      // Handle real numbers
-      .replace(/\\mathbb\{R\}/g, 'ℝ')
-      // Handle complex numbers
-      .replace(/\\mathbb\{C\}/g, 'ℂ');
   };
 
   // Custom styles for markdown components with tighter spacing
@@ -303,253 +292,284 @@ export default function App() {
   };
 
   return (
-    <div style={{ 
-      fontFamily: "sans-serif", 
-      maxWidth: 800, 
-      margin: "1rem auto", 
-      height: "90vh",
-      display: "flex",
-      flexDirection: "column",
-      background: "#fff",
-      borderRadius: 16,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-      overflow: "hidden"
-    }}>
-      {/* Header */}
+    <ErrorBoundary>
       <div style={{ 
-        padding: "1rem 1.5rem", 
-        borderBottom: "1px solid #e1e8ed",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        fontFamily: "sans-serif", 
+        maxWidth: 800, 
+        margin: "1rem auto", 
+        height: "90vh",
         display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
+        flexDirection: "column",
+        background: "#fff",
+        borderRadius: 16,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+        overflow: "hidden"
       }}>
-        <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#fff", fontWeight: "600" }}>
-          AI Chat {health && <span title="API Health">{health}</span>}
-        </h1>
-        <button 
-          onClick={clearConversation}
-          style={{
-            padding: "0.5rem 1rem",
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.3)",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: "500",
-            transition: "all 0.2s ease"
-          }}
-          onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
-          onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
-        >
-          Clear Chat
-        </button>
-      </div>
+        {/* Header */}
+        <div style={{ 
+          padding: "1rem 1.5rem", 
+          borderBottom: "1px solid #e1e8ed",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#fff", fontWeight: "600" }}>
+            AI Chat {health && <span title="API Health">{health}</span>}
+          </h1>
+          <button 
+            onClick={clearConversation}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "rgba(255,255,255,0.2)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.3)",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              transition: "all 0.2s ease"
+            }}
+            onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
+            onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
+          >
+            Clear Chat
+          </button>
+        </div>
 
-      {/* Settings Panel */}
-      <div style={{ 
-        padding: "0.75rem 1.5rem", 
-        borderBottom: "1px solid #e1e8ed",
-        background: "#f8fafc",
-        display: "flex",
-        gap: "0.75rem",
-        flexWrap: "wrap"
-      }}>
-        <input
-          type="text"
-          placeholder="System message (optional)"
-          value={SystemMessage}
-          onChange={e => setSystemMessage(e.target.value)}
-          style={{ 
-            flex: 1, 
-            minWidth: "200px", 
-            padding: "0.5rem 0.75rem", 
-            border: "1px solid #e2e8f0", 
-            borderRadius: "8px",
-            fontSize: "0.875rem",
-            background: "#fff"
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Model (optional)"
-          value={model}
-          onChange={e => setModel(e.target.value)}
-          style={{ 
-            width: "140px", 
-            padding: "0.5rem 0.75rem", 
-            border: "1px solid #e2e8f0", 
-            borderRadius: "8px",
-            fontSize: "0.875rem",
-            background: "#fff"
-          }}
-        />
-        <input
-          type="password"
-          placeholder="OpenAI API Key"
-          value={apiKey}
-          onChange={e => setApiKey(e.target.value)}
-          style={{ 
-            width: "180px", 
-            padding: "0.5rem 0.75rem", 
-            border: "1px solid #e2e8f0", 
-            borderRadius: "8px",
-            fontSize: "0.875rem",
-            background: "#fff"
-          }}
-        />
-      </div>
-
-      {/* Chat Messages */}
-      <div style={{ 
-        flex: 1, 
-        overflowY: "auto", 
-        padding: "1rem 1.5rem",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-        maxHeight: "calc(90vh - 200px)"
-      }}>
-        {conversation.length === 0 ? (
-          <div style={{ 
-            textAlign: "center", 
-            color: "#64748b", 
-            marginTop: "2rem",
-            fontSize: "1.1rem",
-            fontWeight: "500"
-          }}>
-            Start a conversation by typing a message below!
-          </div>
-        ) : (
-          conversation.map((message, index) => (
-            <div
-              key={index}
-              style={{
-                marginBottom: "1rem",
-                display: "flex",
-                justifyContent: message.type === "user" ? "flex-end" : "flex-start"
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: "70%",
-                  padding: "0.875rem 1.125rem",
-                  borderRadius: "20px",
-                  background: message.type === "user" 
-                    ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
-                    : "#fff",
-                  color: message.type === "user" ? "#fff" : "#374151",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  wordWrap: "break-word",
-                  whiteSpace: "pre-wrap",
-                  border: message.type === "assistant" ? "1px solid #e5e7eb" : "none"
-                }}
-              >
-                <div style={{ 
-                  marginBottom: "0.25rem", 
-                  fontSize: "0.75rem", 
-                  opacity: 0.8,
-                  fontWeight: "500"
-                }}>
-                  {message.type === "user" ? "You" : "AI Assistant"}
-                </div>
-                {message.type === "user" ? (
-                  <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
-                ) : (
-                  <div style={{ 
-                    fontSize: "0.875rem",
-                    lineHeight: "1.4"
-                  }}>
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      components={markdownComponents}
-                    >
-                      {convertLatexToHtml(message.content)}
-                    </ReactMarkdown>
-                    {loading && index === conversation.length - 1 && (
-                      <span style={{ opacity: 0.7 }}>...</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Error Display */}
-      {error && (
+        {/* Settings Panel */}
         <div style={{ 
           padding: "0.75rem 1.5rem", 
-          background: "linear-gradient(135deg, #fef2f2 0%, #fecaca 100%)", 
-          color: "#dc2626", 
-          borderTop: "1px solid #fca5a5",
-          fontSize: "0.875rem",
-          fontWeight: "500"
+          borderBottom: "1px solid #e1e8ed",
+          background: "#f8fafc",
+          display: "flex",
+          gap: "0.75rem",
+          flexWrap: "wrap"
         }}>
-          {error}
-        </div>
-      )}
-
-      {/* Message Input */}
-      <div style={{ 
-        padding: "1rem 1.5rem", 
-        borderTop: "1px solid #e1e8ed",
-        background: "#fff"
-      }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
           <input
             type="text"
-            placeholder="Type your message..."
-            value={userMessage}
-            onChange={e => setUserMessage(e.target.value)}
-            disabled={loading}
+            placeholder="System message (optional)"
+            value={SystemMessage}
+            onChange={e => setSystemMessage(e.target.value)}
             style={{ 
               flex: 1, 
-              padding: "0.875rem 1.25rem", 
-              border: "2px solid #e2e8f0", 
-              borderRadius: "25px",
-              fontSize: "1rem",
-              background: "#fff",
-              transition: "border-color 0.2s ease"
+              minWidth: "200px", 
+              padding: "0.5rem 0.75rem", 
+              border: "1px solid #e2e8f0", 
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "#fff"
             }}
-            onFocus={(e) => e.target.style.borderColor = "#667eea"}
-            onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
           />
-          <button 
-            type="submit" 
-            disabled={loading || !userMessage.trim()} 
+          <input
+            type="text"
+            placeholder="Model (optional)"
+            value={model}
+            onChange={e => setModel(e.target.value)}
             style={{ 
-              padding: "0.875rem 1.5rem", 
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-              color: "white", 
-              border: "none", 
-              borderRadius: "25px",
-              cursor: "pointer",
-              fontWeight: "600",
-              fontSize: "1rem",
-              transition: "all 0.2s ease",
-              boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+              width: "140px", 
+              padding: "0.5rem 0.75rem", 
+              border: "1px solid #e2e8f0", 
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "#fff"
             }}
-            onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
-            onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
-          >
-            {loading ? "Sending..." : "Send"}
-          </button>
-        </form>
-      </div>
+          />
+          <input
+            type="password"
+            placeholder="OpenAI API Key"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            style={{ 
+              width: "180px", 
+              padding: "0.5rem 0.75rem", 
+              border: "1px solid #e2e8f0", 
+              borderRadius: "8px",
+              fontSize: "0.875rem",
+              background: "#fff"
+            }}
+          />
+        </div>
 
-      {/* Footer */}
-      <div style={{ 
-        padding: "0.5rem 1.5rem", 
-        fontSize: "0.75rem", 
-        color: "#64748b",
-        textAlign: "center",
-        borderTop: "1px solid #e1e8ed",
-        background: "#f8fafc"
-      }}>
-        Powered by OpenAI & FastAPI | <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer" style={{color: "#667eea", textDecoration: "none"}}>Vercel Ready</a>
+        {/* Chat Messages */}
+        <div 
+          ref={chatContainerRef}
+          style={{ 
+            flex: 1, 
+            overflowY: "auto", 
+            padding: "1rem 1.5rem",
+            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+            height: "calc(90vh - 280px)",
+            minHeight: "300px",
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            {conversation.length === 0 ? (
+              <div style={{ 
+                textAlign: "center", 
+                color: "#64748b", 
+                marginTop: "2rem",
+                fontSize: "1.1rem",
+                fontWeight: "500"
+              }}>
+                Start a conversation by typing a message below!
+              </div>
+            ) : (
+              conversation.map((message, index) => (
+                <div
+                  key={index}
+                  style={{
+                    marginBottom: "1rem",
+                    display: "flex",
+                    justifyContent: message.type === "user" ? "flex-end" : "flex-start"
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "70%",
+                      padding: "0.875rem 1.125rem",
+                      borderRadius: "20px",
+                      background: message.type === "user" 
+                        ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                        : "#fff",
+                      color: message.type === "user" ? "#fff" : "#374151",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      wordWrap: "break-word",
+                      border: message.type === "assistant" ? "1px solid #e5e7eb" : "none"
+                    }}
+                  >
+                    <div style={{ 
+                      marginBottom: "0.25rem", 
+                      fontSize: "0.75rem", 
+                      opacity: 0.8,
+                      fontWeight: "500"
+                    }}>
+                      {message.type === "user" ? "You" : "AI Assistant"}
+                    </div>
+                    {message.type === "user" ? (
+                      <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
+                    ) : (
+                      <div style={{ 
+                        fontSize: "0.875rem",
+                        lineHeight: "1.4",
+                        overflow: "auto",
+                        maxWidth: "100%"
+                      }}>
+                        <style>{`
+                          .katex-display {
+                            margin: 0.75rem 0 !important;
+                            overflow-x: auto !important;
+                            max-width: 100% !important;
+                            text-align: center !important;
+                          }
+                          .katex {
+                            font-size: 1.1em !important;
+                            line-height: 1.2 !important;
+                          }
+                          .katex .mfrac {
+                            margin: 0 0.2em !important;
+                          }
+                        `}</style>
+                        {message.content ? (
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={markdownComponents}
+                          >
+                            {transformBracketMath(message.content)}
+                          </ReactMarkdown>
+                        ) : (
+                          <div>Loading...</div>
+                        )}
+                        {loading && index === conversation.length - 1 && (
+                          <span style={{ opacity: 0.7 }}>...</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div ref={chatEndRef} style={{ height: "1px" }} />
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div style={{ 
+            padding: "0.75rem 1.5rem", 
+            background: "linear-gradient(135deg, #fef2f2 0%, #fecaca 100%)", 
+            color: "#dc2626", 
+            borderTop: "1px solid #fca5a5",
+            fontSize: "0.875rem",
+            fontWeight: "500"
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Message Input */}
+        <div style={{ 
+          padding: "1rem 1.5rem", 
+          borderTop: "1px solid #e1e8ed",
+          background: "#fff"
+        }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
+            <input
+              type="text"
+              placeholder="Type your message..."
+              value={userMessage}
+              onChange={e => setUserMessage(e.target.value)}
+              disabled={loading}
+              style={{ 
+                flex: 1, 
+                padding: "0.875rem 1.25rem", 
+                border: "2px solid #e2e8f0", 
+                borderRadius: "25px",
+                fontSize: "1rem",
+                background: "#fff",
+                transition: "border-color 0.2s ease"
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#667eea"}
+              onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+            />
+            <button 
+              type="submit" 
+              disabled={loading || !userMessage.trim()} 
+              style={{ 
+                padding: "0.875rem 1.5rem", 
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+                color: "white", 
+                border: "none", 
+                borderRadius: "25px",
+                cursor: "pointer",
+                fontWeight: "600",
+                fontSize: "1rem",
+                transition: "all 0.2s ease",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"
+              }}
+              onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
+              onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
+            >
+              {loading ? "Sending..." : "Send"}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div style={{ 
+          padding: "0.5rem 1.5rem", 
+          fontSize: "0.75rem", 
+          color: "#64748b",
+          textAlign: "center",
+          borderTop: "1px solid #e1e8ed",
+          background: "#f8fafc"
+        }}>
+          Powered by OpenAI & FastAPI | <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer" style={{color: "#667eea", textDecoration: "none"}}>Vercel Ready</a>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 } 

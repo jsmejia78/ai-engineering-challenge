@@ -44,6 +44,7 @@ async def chat(request: ChatRequest):
                 model=request.model,
                 messages=[
                     {"role": "system", "content": request.system_message},
+                    {"role": "system", "content": "Use $...$ for inline math and $$...$$ for block math. Do not use square brackets [ ... ] for mathematical expressions."},
                     {"role": "user", "content": request.user_message}
                 ],
                 stream=True  # Enable streaming response
