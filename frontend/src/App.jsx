@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 export default function App() {
   // State for form fields
-  const [developerMessage, setDeveloperMessage] = useState("");
+  const [SystemMessage, setSystemMessage] = useState("");
   const [userMessage, setUserMessage] = useState("");
   const [model, setModel] = useState("gpt-4.1-mini");
   const [apiKey, setApiKey] = useState("");
@@ -32,7 +32,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          developer_message: developerMessage,
+          system_message: SystemMessage,
           user_message: userMessage,
           model,
           api_key: apiKey,
@@ -60,9 +60,9 @@ export default function App() {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <input
           type="text"
-          placeholder="Developer message"
-          value={developerMessage}
-          onChange={e => setDeveloperMessage(e.target.value)}
+          placeholder="System message"
+          value={SystemMessage}
+          onChange={e => setSystemMessage(e.target.value)}
           required
         />
         <input
