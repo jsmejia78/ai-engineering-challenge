@@ -424,344 +424,369 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div style={{ 
+      <div className="app-container" style={{ 
         fontFamily: "sans-serif", 
-        maxWidth: 800, 
-        margin: "1rem auto", 
-        height: "90vh",
+        maxWidth: "100%", 
+        margin: "0", 
+        height: "100vh",
         display: "flex",
         flexDirection: "column",
         background: "#fff",
-        borderRadius: 16,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+        borderRadius: 0,
+        boxShadow: "none",
         overflow: "hidden"
       }}>
-        {/* Header */}
-        <div style={{ 
-          padding: "1rem 1.5rem", 
-          borderBottom: "1px solid #e1e8ed",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        {/* Desktop Container - only applies on larger screens */}
+        <div style={{
+          maxWidth: "800px",
+          margin: "0 auto",
+          height: "100%",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
+          flexDirection: "column",
+          background: "#fff",
+          borderRadius: "16px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          overflow: "hidden",
+          width: "100%"
         }}>
-          <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#fff", fontWeight: "600" }}>
-            AI Chat {health && <span title="API Health">{health}</span>}
-            {isRagMode && pdfStatus?.is_indexed && (
-              <span style={{ fontSize: "0.875rem", marginLeft: "0.5rem", opacity: 0.9 }}>
-                (RAG Mode)
-              </span>
-            )}
-          </h1>
-          <button 
-            onClick={clearConversation}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "rgba(255,255,255,0.2)",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: "500",
-              transition: "all 0.2s ease"
-            }}
-            onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
-            onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
-          >
-            Clear Chat
-          </button>
-        </div>
-
-        {/* Settings Panel */}
-        <div style={{ 
-          padding: "0.75rem 1.5rem", 
-          borderBottom: "1px solid #e1e8ed",
-          background: "#f8fafc",
-          display: "flex",
-          gap: "0.75rem",
-          flexWrap: "wrap",
-          alignItems: "center"
-        }}>
-          <input
-            type="text"
-            placeholder="System message (optional)"
-            value={SystemMessage}
-            onChange={e => setSystemMessage(e.target.value)}
-            style={{ 
-              flex: 1, 
-              minWidth: "200px", 
-              padding: "0.5rem 0.75rem", 
-              border: "1px solid #e2e8f0", 
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              background: "#fff"
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Model (optional)"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            style={{ 
-              width: "140px", 
-              padding: "0.5rem 0.75rem", 
-              border: "1px solid #e2e8f0", 
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              background: "#fff"
-            }}
-          />
-          <input
-            type="password"
-            placeholder="OpenAI API Key"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            style={{ 
-              width: "180px", 
-              padding: "0.5rem 0.75rem", 
-              border: "1px solid #e2e8f0", 
-              borderRadius: "8px",
-              fontSize: "0.875rem",
-              background: "#fff"
-            }}
-          />
-          {/* PDF Upload Section */}
-          <div style={{ 
-            display: "flex", 
-            flexDirection: "column", 
-            alignItems: "center",
-            gap: "0.5rem",
-            minWidth: "200px"
-          }}>
-            <label style={{ 
-              fontSize: "0.75rem", 
-              color: "#64748b", 
-              fontWeight: "500"
-            }}>
-              PDF Upload & RAG
-            </label>
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center",
-              gap: "0.5rem"
-            }}>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                style={{
-                  fontSize: "0.75rem",
-                  maxWidth: "800px"
-                }}
-              />
-              <button
-                onClick={uploadPdf}
-                disabled={!pdfFile || !apiKey || uploadingPdf}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  background: uploadingPdf ? "#94a3b8" : "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: uploadingPdf ? "not-allowed" : "pointer",
-                  fontSize: "0.75rem",
-                  fontWeight: "500"
-                }}
-              >
-                {uploadingPdf ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-            {pdfStatus?.is_indexed && (
-              <div style={{ 
-                fontSize: "0.7rem", 
-                color: "#059669",
-                fontWeight: "500"
-              }}>
-                ✓ PDF Indexed ({pdfStatus.chunks_count} chunks)
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Chat Messages */}
-        <div 
-          ref={chatContainerRef}
-          style={{ 
-            flex: 1, 
-            overflowY: "auto", 
-            padding: "1rem 1.5rem",
-            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-            height: "calc(90vh - 280px)",
-            minHeight: "300px",
+          {/* Header */}
+          <div className="header" style={{ 
+            padding: "1rem 1.5rem", 
+            borderBottom: "1px solid #e1e8ed",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             display: "flex",
-            flexDirection: "column"
-          }}
-        >
-          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-            {conversation.length === 0 ? (
-              <div style={{ 
-                textAlign: "center", 
-                color: "#64748b", 
-                marginTop: "2rem",
-                fontSize: "1.1rem",
-                fontWeight: "500"
-              }}>
-                Start a conversation by typing a message below!
-              </div>
-            ) : (
-              conversation.map((message, index) => (
-                <div
-                  key={index}
-                  style={{
-                    marginBottom: "1rem",
-                    display: "flex",
-                    justifyContent: message.type === "user" ? "flex-end" : "flex-start"
-                  }}
-                >
-                  <div
-                    style={{
-                      maxWidth: "70%",
-                      padding: "0.875rem 1.125rem",
-                      borderRadius: "20px",
-                      background: message.type === "user" 
-                        ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
-                        : "#fff",
-                      color: message.type === "user" ? "#fff" : "#374151",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                      wordWrap: "break-word",
-                      border: message.type === "assistant" ? "1px solid #e5e7eb" : "none"
-                    }}
-                  >
-                    <div style={{ 
-                      marginBottom: "0.25rem", 
-                      fontSize: "0.75rem", 
-                      opacity: 0.8,
-                      fontWeight: "500"
-                    }}>
-                      {message.type === "user" ? "You" : "AI Assistant"}
-                    </div>
-                    {message.type === "user" ? (
-                      <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
-                    ) : (
-                      <div style={{ 
-                        fontSize: "0.875rem",
-                        lineHeight: "1.4",
-                        overflow: "auto",
-                        maxWidth: "100%"
-                      }}>
-                        <style>{`
-                          .katex-display {
-                            margin: 0.75rem 0 !important;
-                            overflow-x: auto !important;
-                            max-width: 100% !important;
-                            text-align: center !important;
-                          }
-                          .katex {
-                            font-size: 1.1em !important;
-                            line-height: 1.2 !important;
-                          }
-                          .katex .mfrac {
-                            margin: 0 0.2em !important;
-                          }
-                        `}</style>
-                        {message.content ? (
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={markdownComponents}
-                          >
-                            {transformBracketMath(message.content)}
-                          </ReactMarkdown>
-                        ) : (
-                          <div>Loading...</div>
-                        )}
-                        {loading && index === conversation.length - 1 && (
-                          <span style={{ opacity: 0.7 }}>...</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div ref={chatEndRef} style={{ height: "1px" }} />
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div style={{ 
-            padding: "0.75rem 1.5rem", 
-            background: "linear-gradient(135deg, #fef2f2 0%, #fecaca 100%)", 
-            color: "#dc2626", 
-            borderTop: "1px solid #fca5a5",
-            fontSize: "0.875rem",
-            fontWeight: "500"
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem"
           }}>
-            {error}
+            <h1 style={{ 
+              margin: 0, 
+              fontSize: "1.5rem", 
+              color: "#fff", 
+              fontWeight: "600",
+              flex: 1,
+              minWidth: "200px"
+            }}>
+              AI Chat {health && <span title="API Health">{health}</span>}
+              {isRagMode && pdfStatus?.is_indexed && (
+                <span style={{ fontSize: "0.875rem", marginLeft: "0.5rem", opacity: 0.9 }}>
+                  (RAG Mode)
+                </span>
+              )}
+            </h1>
+            <button 
+              onClick={clearConversation}
+              style={{
+                padding: "0.5rem 1rem",
+                background: "rgba(255,255,255,0.2)",
+                color: "white",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                fontWeight: "500",
+                transition: "all 0.2s ease",
+                whiteSpace: "nowrap"
+              }}
+              onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
+              onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
+            >
+              Clear Chat
+            </button>
           </div>
-        )}
 
-        {/* Message Input */}
-        <div style={{ 
-          padding: "1rem 1.5rem", 
-          borderTop: "1px solid #e1e8ed",
-          background: "#fff"
-        }}>
-          <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
+          {/* Settings Panel */}
+          <div className="settings-panel" style={{ 
+            padding: "0.75rem 1.5rem", 
+            borderBottom: "1px solid #e1e8ed",
+            background: "#f8fafc",
+            display: "flex",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+            alignItems: "center"
+          }}>
             <input
               type="text"
-              placeholder={isRagMode && pdfStatus?.is_indexed ? "Ask about your PDF..." : "Type your message..."}
-              value={userMessage}
-              onChange={e => setUserMessage(e.target.value)}
-              disabled={loading}
+              placeholder="System message (optional)"
+              value={SystemMessage}
+              onChange={e => setSystemMessage(e.target.value)}
               style={{ 
                 flex: 1, 
-                padding: "0.875rem 1.25rem", 
-                border: "2px solid #e2e8f0", 
-                borderRadius: "25px",
-                fontSize: "1rem",
-                background: "#fff",
-                transition: "border-color 0.2s ease"
+                minWidth: "200px", 
+                padding: "0.5rem 0.75rem", 
+                border: "1px solid #e2e8f0", 
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                background: "#fff"
               }}
-              onFocus={(e) => e.target.style.borderColor = "#667eea"}
-              onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
             />
-            <button 
-              type="submit" 
-              disabled={loading || !userMessage.trim() || !apiKey.trim()} 
+            <input
+              type="text"
+              placeholder="Model (optional)"
+              value={model}
+              onChange={e => setModel(e.target.value)}
               style={{ 
-                padding: "0.875rem 1.5rem", 
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-                color: "white", 
-                border: "none", 
-                borderRadius: "25px",
-                cursor: "pointer",
-                fontWeight: "600",
-                fontSize: "1rem",
-                transition: "all 0.2s ease",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
-                opacity: (loading || !userMessage.trim() || !apiKey.trim()) ? 0.5 : 1
+                width: "140px", 
+                padding: "0.5rem 0.75rem", 
+                border: "1px solid #e2e8f0", 
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                background: "#fff"
               }}
-              onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
-              onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
-            >
-              {loading ? "Sending..." : "Send"}
-            </button>
-          </form>
-        </div>
+            />
+            <input
+              type="password"
+              placeholder="OpenAI API Key"
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              style={{ 
+                width: "180px", 
+                padding: "0.5rem 0.75rem", 
+                border: "1px solid #e2e8f0", 
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                background: "#fff"
+              }}
+            />
+            {/* PDF Upload Section */}
+            <div style={{ 
+              display: "flex", 
+              flexDirection: "column", 
+              alignItems: "center",
+              gap: "0.5rem",
+              minWidth: "200px"
+            }}>
+              <label style={{ 
+                fontSize: "0.75rem", 
+                color: "#64748b", 
+                fontWeight: "500"
+              }}>
+                PDF Upload & RAG
+              </label>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center",
+                gap: "0.5rem"
+              }}>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  style={{
+                    fontSize: "0.75rem",
+                    maxWidth: "800px"
+                  }}
+                />
+                <button
+                  onClick={uploadPdf}
+                  disabled={!pdfFile || !apiKey || uploadingPdf}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: uploadingPdf ? "#94a3b8" : "#3b82f6",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: uploadingPdf ? "not-allowed" : "pointer",
+                    fontSize: "0.75rem",
+                    fontWeight: "500"
+                  }}
+                >
+                  {uploadingPdf ? "Uploading..." : "Upload"}
+                </button>
+              </div>
+              {pdfStatus?.is_indexed && (
+                <div style={{ 
+                  fontSize: "0.7rem", 
+                  color: "#059669",
+                  fontWeight: "500"
+                }}>
+                  ✓ PDF Indexed ({pdfStatus.chunks_count} chunks)
+                </div>
+              )}
+            </div>
+          </div>
 
-        {/* Footer */}
-        <div style={{ 
-          padding: "0.5rem 1.5rem", 
-          fontSize: "0.75rem", 
-          color: "#64748b",
-          textAlign: "center",
-          borderTop: "1px solid #e1e8ed",
-          background: "#f8fafc"
-        }}>
-          Powered by OpenAI & FastAPI | <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer" style={{color: "#667eea", textDecoration: "none"}}>Vercel Ready</a>
+          {/* Chat Messages */}
+          <div 
+            ref={chatContainerRef}
+            className="chat-messages"
+            style={{ 
+              flex: 1, 
+              overflowY: "auto", 
+              padding: "1rem 1.5rem",
+              background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+              height: "calc(90vh - 280px)",
+              minHeight: "300px",
+              display: "flex",
+              flexDirection: "column"
+            }}
+          >
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              {conversation.length === 0 ? (
+                <div style={{ 
+                  textAlign: "center", 
+                  color: "#64748b", 
+                  marginTop: "2rem",
+                  fontSize: "1.1rem",
+                  fontWeight: "500"
+                }}>
+                  Start a conversation by typing a message below!
+                </div>
+              ) : (
+                conversation.map((message, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      marginBottom: "1rem",
+                      display: "flex",
+                      justifyContent: message.type === "user" ? "flex-end" : "flex-start"
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "85%",
+                        padding: "0.875rem 1.125rem",
+                        borderRadius: "20px",
+                        background: message.type === "user" 
+                          ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                          : "#fff",
+                        color: message.type === "user" ? "#fff" : "#374151",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        wordWrap: "break-word",
+                        border: message.type === "assistant" ? "1px solid #e5e7eb" : "none"
+                      }}
+                    >
+                      <div style={{ 
+                        marginBottom: "0.25rem", 
+                        fontSize: "0.75rem", 
+                        opacity: 0.8,
+                        fontWeight: "500"
+                      }}>
+                        {message.type === "user" ? "You" : "AI Assistant"}
+                      </div>
+                      {message.type === "user" ? (
+                        <div style={{ whiteSpace: "pre-wrap" }}>{message.content}</div>
+                      ) : (
+                        <div style={{ 
+                          fontSize: "0.875rem",
+                          lineHeight: "1.4",
+                          overflow: "auto",
+                          maxWidth: "100%"
+                        }}>
+                          <style>{`
+                            .katex-display {
+                              margin: 0.75rem 0 !important;
+                              overflow-x: auto !important;
+                              max-width: 100% !important;
+                              text-align: center !important;
+                            }
+                            .katex {
+                              font-size: 1.1em !important;
+                              line-height: 1.2 !important;
+                            }
+                            .katex .mfrac {
+                              margin: 0 0.2em !important;
+                            }
+                          `}</style>
+                          {message.content ? (
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={markdownComponents}
+                            >
+                              {transformBracketMath(message.content)}
+                            </ReactMarkdown>
+                          ) : (
+                            <div>Loading...</div>
+                          )}
+                          {loading && index === conversation.length - 1 && (
+                            <span style={{ opacity: 0.7 }}>...</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div ref={chatEndRef} style={{ height: "1px" }} />
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div style={{ 
+              padding: "0.75rem 1.5rem", 
+              background: "linear-gradient(135deg, #fef2f2 0%, #fecaca 100%)", 
+              color: "#dc2626", 
+              borderTop: "1px solid #fca5a5",
+              fontSize: "0.875rem",
+              fontWeight: "500"
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Message Input */}
+          <div className="message-input" style={{ 
+            padding: "1rem 1.5rem", 
+            borderTop: "1px solid #e1e8ed",
+            background: "#fff"
+          }}>
+            <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
+              <input
+                type="text"
+                placeholder={isRagMode && pdfStatus?.is_indexed ? "Ask about your PDF..." : "Type your message..."}
+                value={userMessage}
+                onChange={e => setUserMessage(e.target.value)}
+                disabled={loading}
+                style={{ 
+                  flex: 1, 
+                  padding: "0.875rem 1.25rem", 
+                  border: "2px solid #e2e8f0", 
+                  borderRadius: "25px",
+                  fontSize: "1rem",
+                  background: "#fff",
+                  transition: "border-color 0.2s ease"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#667eea"}
+                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+              />
+              <button 
+                type="submit" 
+                disabled={loading || !userMessage.trim() || !apiKey.trim()} 
+                style={{ 
+                  padding: "0.875rem 1.5rem", 
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+                  color: "white", 
+                  border: "none", 
+                  borderRadius: "25px",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                  fontSize: "1rem",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                  opacity: (loading || !userMessage.trim() || !apiKey.trim()) ? 0.5 : 1
+                }}
+                onMouseOver={(e) => e.target.style.transform = "translateY(-1px)"}
+                onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
+              >
+                {loading ? "Sending..." : "Send"}
+              </button>
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="footer" style={{ 
+            padding: "0.5rem 1.5rem", 
+            fontSize: "0.75rem", 
+            color: "#64748b",
+            textAlign: "center",
+            borderTop: "1px solid #e1e8ed",
+            background: "#f8fafc"
+          }}>
+            Powered by OpenAI & FastAPI | <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer" style={{color: "#667eea", textDecoration: "none"}}>Vercel Ready</a>
+          </div>
         </div>
       </div>
     </ErrorBoundary>
