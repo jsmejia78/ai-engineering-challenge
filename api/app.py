@@ -131,6 +131,15 @@ async def get_data_file_indexing_status():
     
     return rag_service.get_index_status()
 
+# Define endpoint to clear the indexed data
+@app.delete("/api/clear-data-file-index")
+async def clear_data_file_index():
+    """Clear the currently indexed data file."""
+    if rag_service is None:
+        raise HTTPException(status_code=503, detail="RAG service is not available")
+    
+    return rag_service.clear_index()
+
 # Define a health check endpoint to verify API status
 @app.get("/api/health")
 async def health_check():

@@ -125,9 +125,31 @@ export default function App() {
   React.useEffect(() => {
     fetch("/api/data-file-indexing-status")
       .then((res) => res.json())
-      .then((data) => setDataFileStatus(data))
-      .catch(() => setDataFileStatus({ is_indexed: false, chunks_count: 0 }));
-  }, []);
+      .then((data) => {
+        setDataFileStatus(data);
+        // If there's no actual file selected but backend shows indexed, clear it
+        if (data.is_indexed && !dataFile) {
+          // Clear the backend index since user doesn't have a file selected
+          fetch("/api/clear-data-file-index", { method: "DELETE" })
+            .then(() => {
+              setDataFileStatus({ is_indexed: false, chunks_count: 0 });
+              setIsRagMode(false);
+            })
+            .catch(() => {
+              // If clearing fails, just reset frontend state
+              setDataFileStatus({ is_indexed: false, chunks_count: 0 });
+              setIsRagMode(false);
+            });
+        } else {
+          // Set RAG mode based on actual indexing status
+          setIsRagMode(data.is_indexed || false);
+        }
+      })
+      .catch(() => {
+        setDataFileStatus({ is_indexed: false, chunks_count: 0 });
+        setIsRagMode(false);
+      });
+  }, [dataFile]);
 
   // Handle form submit
   const handleSubmit = async (e) => {
@@ -181,17 +203,22 @@ export default function App() {
       const assistantMsg = { type: "assistant", content: "", timestamp: new Date() };
       setConversation(prev => [...prev, assistantMsg]);
       
+      const decoder = new TextDecoder();
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        result += new TextDecoder().decode(value);
         
-        // Update the assistant message content
+        const chunk = decoder.decode(value, { stream: true });
+        result += chunk;
+        
+        // Update only the last message content more efficiently
         setConversation(prev => {
           const newConversation = [...prev];
-          if (newConversation.length > 0) {
-            newConversation[newConversation.length - 1] = {
-              ...newConversation[newConversation.length - 1],
+          const lastIndex = newConversation.length - 1;
+          if (lastIndex >= 0 && newConversation[lastIndex].type === "assistant") {
+            newConversation[lastIndex] = {
+              ...newConversation[lastIndex],
               content: result
             };
           }
@@ -264,6 +291,20 @@ export default function App() {
       setError(err.message || "Failed to upload data file");
     } finally {
       setUploadingDataFile(false);
+    }
+  };
+
+  // Clear indexed data file
+  const clearDataFileIndex = async () => {
+    try {
+      await fetch("/api/clear-data-file-index", { method: "DELETE" });
+      setDataFileStatus({ is_indexed: false, chunks_count: 0 });
+      setDataFile(null);
+      setIsRagMode(false);
+      setError("");
+    } catch (err) {
+      console.error("Error clearing data file index:", err);
+      setError("Failed to clear data file index");
     }
   };
 
@@ -588,6 +629,23 @@ export default function App() {
                 >
                   {uploadingDataFile ? "Uploading..." : "Upload"}
                 </button>
+                {dataFileStatus?.is_indexed && (
+                  <button
+                    onClick={clearDataFileIndex}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
               {dataFileStatus?.is_indexed && (
                 <div style={{ 

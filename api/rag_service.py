@@ -151,6 +151,17 @@ class RAGService:
             "document_id": self.document_id,
             "chunks_count": len(self.document_chunks) if self.document_chunks else 0
         }
+    
+    def clear_index(self) -> Dict[str, Any]:
+        """Clear the current indexed data and reset the service."""
+        self.vector_db = None
+        self.document_chunks = []
+        self.document_id = None
+        # Note: We keep the models initialized to avoid re-initialization overhead
+        return {
+            "success": True,
+            "message": "Index cleared successfully"
+        }
 
 
 # Global RAG service instance
