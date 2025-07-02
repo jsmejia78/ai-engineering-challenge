@@ -21,4 +21,25 @@ button {
 button:disabled {
   background: #aaa;
   cursor: not-allowed;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* File upload hover effects */
+.file-upload-area:hover {
+  border-color: #3b82f6 !important;
+  background: #f8fafc !important;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease;
 } 

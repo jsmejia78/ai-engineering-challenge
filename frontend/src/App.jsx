@@ -552,7 +552,7 @@ export default function App() {
                 onChange={handleFileChange}
                 style={{
                   fontSize: "0.75rem",
-                  maxWidth: "150px"
+                  maxWidth: "800px"
                 }}
               />
               <button
