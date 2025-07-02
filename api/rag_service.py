@@ -102,6 +102,44 @@ class RAGService:
 
 
     
+    async def chat_with_data_sources_stream(self, user_message: str, api_key: str, system_message: str = ""):
+        """Chat with the indexed data source using RAG with streaming."""
+        try:
+            # Check if data source is indexed
+            if not self.vector_db or not self.document_chunks:
+                raise HTTPException(status_code=400, detail="No data source has been indexed. Please upload and index a PDF or TXT file first.")
+            
+            # Initialize models if not already done
+            if not self.chat_model:
+                await self.initialize_models(api_key)
+            
+            # Search for relevant chunks
+            search_results = self.vector_db.search_by_text(user_message, k=3, return_as_text=True)  # type: ignore
+            relevant_chunks = search_results if search_results else []
+            
+            # Create context from relevant chunks
+            context = "\n\n".join(relevant_chunks) if relevant_chunks else ""  # type: ignore
+            
+            # Create the prompt with context
+            if system_message:
+                full_system_message = f"{system_message}\n\nUse the following context to answer the user's question:\n\n{context}"
+            else:
+                full_system_message = f"You are a helpful assistant. Use the following context from the uploaded document to answer the user's question. If the context doesn't contain enough information to answer the question, say so.\n\nContext:\n{context}"
+            
+            # Generate streaming response using chat model
+            if self.chat_model:
+                messages = [
+                    {"role": "system", "content": full_system_message},
+                    {"role": "user", "content": user_message}
+                ]
+                async for chunk in self.chat_model.astream(messages):
+                    yield chunk
+            else:
+                raise HTTPException(status_code=500, detail="Chat model not initialized")
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
+
     async def chat_with_data_sources(self, user_message: str, api_key: str, system_message: str = "") -> str:
         """Chat with the indexed data source using RAG."""
         try:

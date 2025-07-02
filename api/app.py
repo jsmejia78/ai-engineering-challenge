@@ -91,7 +91,7 @@ async def chat(request: ChatRequest):
 
 # Define PDF upload and indexing endpoint
 @app.post("/api/upload-data-file")
-async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
+async def upload_data_file(file: UploadFile = File(...), api_key: str = Form(...)):
     """Upload and index a PDF file for RAG functionality."""
     if not api_key:
         raise HTTPException(status_code=400, detail="API key is required")
@@ -108,17 +108,24 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
 # Define RAG chat endpoint
 @app.post("/api/rag-chat")
 async def rag_chat(request: RAGChatRequest):
-    """Chat with the indexed PDF or TXT input using RAG."""
+    """Chat with the indexed PDF or TXT input using RAG with streaming."""
     if rag_service is None:
         raise HTTPException(status_code=503, detail="RAG service is not available")
     
     try:
-        response = await rag_service.chat_with_data_sources(
-            request.user_message, 
-            request.api_key, 
-            request.system_message or ""
-        )
-        return {"response": response}
+        # Create an async generator function for streaming responses
+        async def generate():
+            # Type checking ensures rag_service is not None here
+            if rag_service is not None:
+                async for chunk in rag_service.chat_with_data_sources_stream(
+                    request.user_message, 
+                    request.api_key, 
+                    request.system_message or ""
+                ):
+                    yield chunk
+
+        # Return a streaming response to the client
+        return StreamingResponse(generate(), media_type="text/plain")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

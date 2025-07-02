@@ -89,6 +89,7 @@ export default function App() {
   // Ref for auto-scrolling to latest message
   const chatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -302,6 +303,11 @@ export default function App() {
       setDataFile(null);
       setIsRagMode(false);
       setError("");
+      
+      // Clear the file input field
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (err) {
       console.error("Error clearing data file index:", err);
       setError("Failed to clear data file index");
@@ -335,20 +341,43 @@ export default function App() {
       });
       
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
       
-      const data = await res.json();
+      if (!res.body) throw new Error("No response body");
+      const reader = res.body.getReader();
+      let result = "";
       
-      // Add assistant message
-      const assistantMsg = { type: "assistant", content: data.response, timestamp: new Date() };
+      // Add assistant message placeholder
+      const assistantMsg = { type: "assistant", content: "", timestamp: new Date() };
       setConversation(prev => [...prev, assistantMsg]);
       
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        result += chunk;
+        
+        // Update only the last message content more efficiently
+        setConversation(prev => {
+          const newConversation = [...prev];
+          const lastIndex = newConversation.length - 1;
+          if (lastIndex >= 0 && newConversation[lastIndex].type === "assistant") {
+            newConversation[lastIndex] = {
+              ...newConversation[lastIndex],
+              content: result
+            };
+          }
+          return newConversation;
+        });
+      }
     } catch (err) {
       console.error('RAG chat error:', err);
       setError(err.message || "Unknown error occurred");
-      // Remove the user message if there was an error
+      // Remove the assistant message if there was an error
       setConversation(prev => prev.slice(0, -1));
     } finally {
       setLoading(false);
@@ -608,6 +637,7 @@ export default function App() {
                   type="file"
                   accept=".pdf,.txt"
                   onChange={handleFileChange}
+                  ref={fileInputRef}
                   style={{
                     fontSize: "0.75rem",
                     maxWidth: "800px"
