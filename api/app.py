@@ -1,5 +1,5 @@
 # Import required FastAPI components for building the API
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 # Import Pydantic for data validation and settings management
@@ -74,7 +74,7 @@ async def chat(request: ChatRequest):
 
 # Define PDF upload and indexing endpoint
 @app.post("/api/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...), api_key: str = ""):
+async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
     """Upload and index a PDF file for RAG functionality."""
     if not api_key:
         raise HTTPException(status_code=400, detail="API key is required")
