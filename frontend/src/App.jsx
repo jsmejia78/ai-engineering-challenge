@@ -71,7 +71,6 @@ export default function App() {
   const [userMessage, setUserMessage] = useState("");
   const [model, setModel] = useState("gpt-4.1-mini");
   const [apiKey, setApiKey] = useState("");
-  const [temperature, setTemperature] = useState(0.7); // Default temperature
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -80,6 +79,12 @@ export default function App() {
   
   // Health check state
   const [health, setHealth] = useState(null);
+  
+  // PDF RAG state
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfStatus, setPdfStatus] = useState(null);
+  const [isRagMode, setIsRagMode] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   
   // Ref for auto-scrolling to latest message
   const chatEndRef = useRef(null);
@@ -116,8 +121,29 @@ export default function App() {
       .catch(() => setHealth("🔴"));
   }, []);
 
+  // Check PDF status on mount
+  React.useEffect(() => {
+    fetch("/api/pdf-status")
+      .then((res) => res.json())
+      .then((data) => setPdfStatus(data))
+      .catch(() => setPdfStatus({ is_indexed: false, chunks_count: 0 }));
+  }, []);
+
   // Handle form submit
   const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!userMessage.trim()) return;
+    
+    // Use RAG chat if PDF is indexed, otherwise use regular chat
+    if (isRagMode && pdfStatus?.is_indexed) {
+      await handleRagChat(e);
+    } else {
+      await handleRegularChat(e);
+    }
+  };
+
+  // Handle regular chat
+  const handleRegularChat = async (e) => {
     e.preventDefault();
     if (!userMessage.trim()) return;
     
@@ -140,7 +166,6 @@ export default function App() {
           user_message: currentUserMessage,
           model,
           api_key: apiKey,
-          temperature,
         }),
       });
       
@@ -187,6 +212,106 @@ export default function App() {
   const clearConversation = () => {
     setConversation([]);
     setError("");
+  };
+
+  // Handle PDF file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setPdfFile(file);
+      setError("");
+    } else {
+      setError("Please select a valid PDF file");
+      setPdfFile(null);
+    }
+  };
+
+  // Upload and index PDF
+  const uploadPdf = async () => {
+    if (!pdfFile || !apiKey) {
+      setError("Please select a PDF file and enter your API key");
+      return;
+    }
+
+    setUploadingPdf(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("api_key", apiKey);
+
+      const response = await fetch("/api/upload-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to upload PDF");
+      }
+
+      const result = await response.json();
+      setPdfStatus({
+        is_indexed: true,
+        document_id: result.document_id,
+        chunks_count: result.chunks_count
+      });
+      setIsRagMode(true);
+      setError("");
+    } catch (err) {
+      console.error("PDF upload error:", err);
+      setError(err.message || "Failed to upload PDF");
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
+  // Handle RAG chat
+  const handleRagChat = async (e) => {
+    e.preventDefault();
+    if (!userMessage.trim() || !pdfStatus?.is_indexed) return;
+    
+    setLoading(true);
+    setError("");
+    
+    // Add user message to conversation
+    const userMsg = { type: "user", content: userMessage, timestamp: new Date() };
+    setConversation(prev => [...prev, userMsg]);
+    
+    const currentUserMessage = userMessage;
+    setUserMessage(""); // Clear input immediately
+    
+    try {
+      const res = await fetch("/api/rag-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_message: currentUserMessage,
+          system_message: SystemMessage,
+          api_key: apiKey,
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      // Add assistant message
+      const assistantMsg = { type: "assistant", content: data.response, timestamp: new Date() };
+      setConversation(prev => [...prev, assistantMsg]);
+      
+    } catch (err) {
+      console.error('RAG chat error:', err);
+      setError(err.message || "Unknown error occurred");
+      // Remove the user message if there was an error
+      setConversation(prev => prev.slice(0, -1));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Custom styles for markdown components with tighter spacing
@@ -322,6 +447,11 @@ export default function App() {
         }}>
           <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#fff", fontWeight: "600" }}>
             AI Chat {health && <span title="API Health">{health}</span>}
+            {isRagMode && pdfStatus?.is_indexed && (
+              <span style={{ fontSize: "0.875rem", marginLeft: "0.5rem", opacity: 0.9 }}>
+                (RAG Mode)
+              </span>
+            )}
           </h1>
           <button 
             onClick={clearConversation}
@@ -396,52 +526,61 @@ export default function App() {
               background: "#fff"
             }}
           />
+          {/* PDF Upload Section */}
           <div style={{ 
             display: "flex", 
             flexDirection: "column", 
             alignItems: "center",
-            gap: "0.25rem"
+            gap: "0.5rem",
+            minWidth: "200px"
           }}>
             <label style={{ 
               fontSize: "0.75rem", 
               color: "#64748b", 
               fontWeight: "500"
             }}>
-              Model Temperature: {temperature}
+              PDF Upload & RAG
             </label>
             <div style={{ 
               display: "flex", 
               alignItems: "center",
-              gap: "0.5rem",
-              width: "200px"
+              gap: "0.5rem"
             }}>
-              <span style={{ 
-                fontSize: "0.625rem", 
-                color: "#94a3b8",
-                whiteSpace: "nowrap"
-              }}>
-                Less Creative
-              </span>
               <input
-                type="range"
-                min="0.2"
-                max="1.2"
-                step="0.1"
-                value={temperature}
-                onChange={e => setTemperature(Number(e.target.value))}
+                type="file"
+                accept=".pdf"
+                onChange={handleFileChange}
                 style={{
-                  flex: 1,
-                  cursor: "pointer"
+                  fontSize: "0.75rem",
+                  maxWidth: "150px"
                 }}
               />
-              <span style={{ 
-                fontSize: "0.625rem", 
-                color: "#94a3b8",
-                whiteSpace: "nowrap"
-              }}>
-                More Creative
-              </span>
+              <button
+                onClick={uploadPdf}
+                disabled={!pdfFile || !apiKey || uploadingPdf}
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  background: uploadingPdf ? "#94a3b8" : "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: uploadingPdf ? "not-allowed" : "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: "500"
+                }}
+              >
+                {uploadingPdf ? "Uploading..." : "Upload"}
+              </button>
             </div>
+            {pdfStatus?.is_indexed && (
+              <div style={{ 
+                fontSize: "0.7rem", 
+                color: "#059669",
+                fontWeight: "500"
+              }}>
+                ✓ PDF Indexed ({pdfStatus.chunks_count} chunks)
+              </div>
+            )}
           </div>
         </div>
 
@@ -573,7 +712,7 @@ export default function App() {
           <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
             <input
               type="text"
-              placeholder="Type your message..."
+              placeholder={isRagMode && pdfStatus?.is_indexed ? "Ask about your PDF..." : "Type your message..."}
               value={userMessage}
               onChange={e => setUserMessage(e.target.value)}
               disabled={loading}

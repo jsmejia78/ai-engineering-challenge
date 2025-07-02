@@ -1,5 +1,5 @@
 # Import required FastAPI components for building the API
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 # Import Pydantic for data validation and settings management
@@ -8,9 +8,10 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 from typing import Optional
+from rag_service import rag_service
 
 # Initialize FastAPI application with a title
-app = FastAPI(title="OpenAI Chat API")
+app = FastAPI(title="OpenAI Chat API with PDF RAG")
 
 # Configure CORS (Cross-Origin Resource Sharing) middleware
 # This allows the API to be accessed from different domains/origins
@@ -31,6 +32,12 @@ class ChatRequest(BaseModel):
     api_key: str          # OpenAI API key for authentication
     temperature: Optional[float] = 0.7  # Temperature for controlling creativity (0-2)
 
+# Define the data model for RAG chat requests
+class RAGChatRequest(BaseModel):
+    user_message: str      # Message from the user
+    system_message: Optional[str] = ""  # Optional system message
+    api_key: str          # OpenAI API key for authentication
+
 # Define the main chat endpoint that handles POST requests
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
@@ -42,7 +49,7 @@ async def chat(request: ChatRequest):
         async def generate():
             # Create a streaming chat completion request
             stream = client.chat.completions.create(
-                model=request.model,
+                model=request.model or "gpt-4.1-mini",
                 messages=[
                     {"role": "system", "content": request.system_message},
                     {"role": "system", "content": "Do not produce answers greater than 500 words"},
@@ -64,6 +71,39 @@ async def chat(request: ChatRequest):
     except Exception as e:
         # Handle any errors that occur during processing
         raise HTTPException(status_code=500, detail=str(e))
+
+# Define PDF upload and indexing endpoint
+@app.post("/api/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...), api_key: str = ""):
+    """Upload and index a PDF file for RAG functionality."""
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API key is required")
+    
+    try:
+        result = await rag_service.upload_and_index_pdf(file, api_key)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Define RAG chat endpoint
+@app.post("/api/rag-chat")
+async def rag_chat(request: RAGChatRequest):
+    """Chat with the indexed PDF using RAG."""
+    try:
+        response = await rag_service.chat_with_pdf(
+            request.user_message, 
+            request.api_key, 
+            request.system_message or ""
+        )
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Define endpoint to get PDF indexing status
+@app.get("/api/pdf-status")
+async def get_pdf_status():
+    """Get the current status of PDF indexing."""
+    return rag_service.get_index_status()
 
 # Define a health check endpoint to verify API status
 @app.get("/api/health")
