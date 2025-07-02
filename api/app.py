@@ -7,8 +7,25 @@ from pydantic import BaseModel
 # Import OpenAI client for interacting with OpenAI's API
 from openai import OpenAI
 import os
+import sys
 from typing import Optional
-from rag_service import rag_service_object
+
+# Add the current directory to Python path for Vercel compatibility
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# Import RAG service with error handling for deployment
+try:
+    from rag_service import rag_service
+except ImportError:
+    # Fallback for different import paths
+    try:
+        import rag_service as rag_module
+        rag_service = rag_module.rag_service
+    except ImportError:
+        rag_service = None
+        print("Warning: RAG service could not be imported")
 
 # Initialize FastAPI application with a title
 app = FastAPI(title="OpenAI Chat API with PDF RAG")
@@ -79,8 +96,11 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
     if not api_key:
         raise HTTPException(status_code=400, detail="API key is required")
     
+    if rag_service is None:
+        raise HTTPException(status_code=503, detail="RAG service is not available")
+    
     try:
-        result = await rag_service_object.upload_and_index_pdf(file, api_key)
+        result = await rag_service.upload_and_index_pdf(file, api_key)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -89,8 +109,11 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
 @app.post("/api/rag-chat")
 async def rag_chat(request: RAGChatRequest):
     """Chat with the indexed PDF using RAG."""
+    if rag_service is None:
+        raise HTTPException(status_code=503, detail="RAG service is not available")
+    
     try:
-        response = await rag_service_object.chat_with_pdf(
+        response = await rag_service.chat_with_pdf(
             request.user_message, 
             request.api_key, 
             request.system_message or ""
@@ -103,7 +126,10 @@ async def rag_chat(request: RAGChatRequest):
 @app.get("/api/pdf-status")
 async def get_pdf_status():
     """Get the current status of PDF indexing."""
-    return rag_service_object.get_index_status()
+    if rag_service is None:
+        return {"is_indexed": False, "document_id": None, "chunks_count": 0, "error": "RAG service not available"}
+    
+    return rag_service.get_index_status()
 
 # Define a health check endpoint to verify API status
 @app.get("/api/health")
