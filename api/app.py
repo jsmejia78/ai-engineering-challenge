@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 from typing import Optional
-from rag_service import rag_service
+from rag_service import rag_service_object
 
 # Initialize FastAPI application with a title
 app = FastAPI(title="OpenAI Chat API with PDF RAG")
@@ -80,7 +80,7 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
         raise HTTPException(status_code=400, detail="API key is required")
     
     try:
-        result = await rag_service.upload_and_index_pdf(file, api_key)
+        result = await rag_service_object.upload_and_index_pdf(file, api_key)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -90,7 +90,7 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
 async def rag_chat(request: RAGChatRequest):
     """Chat with the indexed PDF using RAG."""
     try:
-        response = await rag_service.chat_with_pdf(
+        response = await rag_service_object.chat_with_pdf(
             request.user_message, 
             request.api_key, 
             request.system_message or ""
@@ -103,7 +103,7 @@ async def rag_chat(request: RAGChatRequest):
 @app.get("/api/pdf-status")
 async def get_pdf_status():
     """Get the current status of PDF indexing."""
-    return rag_service.get_index_status()
+    return rag_service_object.get_index_status()
 
 # Define a health check endpoint to verify API status
 @app.get("/api/health")

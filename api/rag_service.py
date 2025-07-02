@@ -136,4 +136,4 @@ class RAGService:
 
 
 # Global RAG service instance
-rag_service = RAGService() 
+rag_service_object = RAGService() 
