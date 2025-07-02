@@ -1,8 +1,16 @@
 import os
 import tempfile
 import uuid
+import sys
 from typing import List, Dict, Any
 from fastapi import UploadFile, HTTPException
+
+# Add parent directory to Python path to access aimakerspace at root level
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from aimakerspace.text_utils import TextFileLoader, PDFLoader, CharacterTextSplitter
 from aimakerspace.vectordatabase import VectorDatabase
 from aimakerspace.openai_utils.embedding import EmbeddingModel
