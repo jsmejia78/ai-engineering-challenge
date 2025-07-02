@@ -90,7 +90,7 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Define PDF upload and indexing endpoint
-@app.post("/api/upload-pdf")
+@app.post("/api/upload-data-file")
 async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
     """Upload and index a PDF file for RAG functionality."""
     if not api_key:
@@ -100,7 +100,7 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
         raise HTTPException(status_code=503, detail="RAG service is not available")
     
     try:
-        result = await rag_service.upload_and_index_pdf(file, api_key)
+        result = await rag_service.upload_and_index_data_source(file, api_key)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -108,12 +108,12 @@ async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
 # Define RAG chat endpoint
 @app.post("/api/rag-chat")
 async def rag_chat(request: RAGChatRequest):
-    """Chat with the indexed PDF using RAG."""
+    """Chat with the indexed PDF or TXT input using RAG."""
     if rag_service is None:
         raise HTTPException(status_code=503, detail="RAG service is not available")
     
     try:
-        response = await rag_service.chat_with_pdf(
+        response = await rag_service.chat_with_data_sources(
             request.user_message, 
             request.api_key, 
             request.system_message or ""
@@ -123,9 +123,9 @@ async def rag_chat(request: RAGChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Define endpoint to get PDF indexing status
-@app.get("/api/pdf-status")
-async def get_pdf_status():
-    """Get the current status of PDF indexing."""
+@app.get("/api/data-file-indexing-status")
+async def get_data_file_indexing_status():
+    """Get the current status of Data File indexing."""
     if rag_service is None:
         return {"is_indexed": False, "document_id": None, "chunks_count": 0, "error": "RAG service not available"}
     

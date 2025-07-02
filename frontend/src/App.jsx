@@ -80,11 +80,11 @@ export default function App() {
   // Health check state
   const [health, setHealth] = useState(null);
   
-  // PDF RAG state
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pdfStatus, setPdfStatus] = useState(null);
+  // Data File RAG state
+  const [dataFile, setDataFile] = useState(null);
+  const [dataFileStatus, setDataFileStatus] = useState(null);
   const [isRagMode, setIsRagMode] = useState(false);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadingDataFile, setUploadingDataFile] = useState(false);
   
   // Ref for auto-scrolling to latest message
   const chatEndRef = useRef(null);
@@ -121,12 +121,12 @@ export default function App() {
       .catch(() => setHealth("🔴"));
   }, []);
 
-  // Check PDF status on mount
+  // Check Data File status on mount
   React.useEffect(() => {
-    fetch("/api/pdf-status")
+    fetch("/api/data-file-indexing-status")
       .then((res) => res.json())
-      .then((data) => setPdfStatus(data))
-      .catch(() => setPdfStatus({ is_indexed: false, chunks_count: 0 }));
+      .then((data) => setDataFileStatus(data))
+      .catch(() => setDataFileStatus({ is_indexed: false, chunks_count: 0 }));
   }, []);
 
   // Handle form submit
@@ -134,8 +134,8 @@ export default function App() {
     e.preventDefault();
     if (!userMessage.trim()) return;
     
-    // Use RAG chat if PDF is indexed, otherwise use regular chat
-    if (isRagMode && pdfStatus?.is_indexed) {
+    // Use RAG chat if data file is indexed, otherwise use regular chat
+    if (isRagMode && dataFileStatus?.is_indexed) {
       await handleRagChat(e);
     } else {
       await handleRegularChat(e);
@@ -214,45 +214,45 @@ export default function App() {
     setError("");
   };
 
-  // Handle PDF file selection
+  // Handle Data File selection
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setPdfFile(file);
+    if (file && (file.type === "application/pdf" || file.type === "text/plain")) {
+      setDataFile(file);
       setError("");
     } else {
-      setError("Please select a valid PDF file");
-      setPdfFile(null);
+      setError("Please select a valid PDF or TXT file");
+      setDataFile(null);
     }
   };
 
-  // Upload and index PDF
-  const uploadPdf = async () => {
-    if (!pdfFile || !apiKey) {
-      setError("Please select a PDF file and enter your API key");
+  // Upload and index Data File
+  const uploadDataFile = async () => {
+    if (!dataFile || !apiKey) {
+      setError("Please select a PDF or TXT file and enter your API key");
       return;
     }
 
-    setUploadingPdf(true);
+    setUploadingDataFile(true);
     setError("");
 
     try {
       const formData = new FormData();
-      formData.append("file", pdfFile);
+      formData.append("file", dataFile);
       formData.append("api_key", apiKey);
 
-      const response = await fetch("/api/upload-pdf", {
+      const response = await fetch("/api/upload-data-file", {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to upload PDF");
+        throw new Error(errorData.detail || "Failed to upload data file");
       }
 
       const result = await response.json();
-      setPdfStatus({
+      setDataFileStatus({
         is_indexed: true,
         document_id: result.document_id,
         chunks_count: result.chunks_count
@@ -260,17 +260,17 @@ export default function App() {
       setIsRagMode(true);
       setError("");
     } catch (err) {
-      console.error("PDF upload error:", err);
-      setError(err.message || "Failed to upload PDF");
+      console.error("Data file upload error:", err);
+      setError(err.message || "Failed to upload data file");
     } finally {
-      setUploadingPdf(false);
+      setUploadingDataFile(false);
     }
   };
 
   // Handle RAG chat
   const handleRagChat = async (e) => {
     e.preventDefault();
-    if (!userMessage.trim() || !pdfStatus?.is_indexed) return;
+    if (!userMessage.trim() || !dataFileStatus?.is_indexed) return;
     
     setLoading(true);
     setError("");
@@ -469,7 +469,7 @@ export default function App() {
               minWidth: "200px"
             }}>
               AI Chat {health && <span title="API Health">{health}</span>}
-              {isRagMode && pdfStatus?.is_indexed && (
+              {isRagMode && dataFileStatus?.is_indexed && (
                 <span style={{ fontSize: "0.875rem", marginLeft: "0.5rem", opacity: 0.9 }}>
                   (RAG Mode)
                 </span>
@@ -549,21 +549,15 @@ export default function App() {
                 background: "#fff"
               }}
             />
-            {/* PDF Upload Section */}
+            {/* Data File Upload Section */}
             <div style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              alignItems: "center",
-              gap: "0.5rem",
-              minWidth: "200px"
+              background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)", 
+              padding: "1rem 1.5rem",
+              borderBottom: "1px solid #e1e8ed"
             }}>
-              <label style={{ 
-                fontSize: "0.75rem", 
-                color: "#64748b", 
-                fontWeight: "500"
-              }}>
-                PDF Upload & RAG
-              </label>
+              <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#4338ca", marginBottom: "0.75rem" }}>
+                Data File Upload & RAG
+              </div>
               <div style={{ 
                 display: "flex", 
                 alignItems: "center",
@@ -571,7 +565,7 @@ export default function App() {
               }}>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.txt"
                   onChange={handleFileChange}
                   style={{
                     fontSize: "0.75rem",
@@ -579,29 +573,29 @@ export default function App() {
                   }}
                 />
                 <button
-                  onClick={uploadPdf}
-                  disabled={!pdfFile || !apiKey || uploadingPdf}
+                  onClick={uploadDataFile}
+                  disabled={!dataFile || !apiKey || uploadingDataFile}
                   style={{
                     padding: "0.5rem 0.75rem",
-                    background: uploadingPdf ? "#94a3b8" : "#3b82f6",
+                    background: uploadingDataFile ? "#94a3b8" : "#3b82f6",
                     color: "white",
                     border: "none",
                     borderRadius: "6px",
-                    cursor: uploadingPdf ? "not-allowed" : "pointer",
+                    cursor: uploadingDataFile ? "not-allowed" : "pointer",
                     fontSize: "0.75rem",
                     fontWeight: "500"
                   }}
                 >
-                  {uploadingPdf ? "Uploading..." : "Upload"}
+                  {uploadingDataFile ? "Uploading..." : "Upload"}
                 </button>
               </div>
-              {pdfStatus?.is_indexed && (
+              {dataFileStatus?.is_indexed && (
                 <div style={{ 
                   fontSize: "0.7rem", 
                   color: "#059669",
                   fontWeight: "500"
                 }}>
-                  ✓ PDF Indexed ({pdfStatus.chunks_count} chunks)
+                  ✓ Data File Indexed ({dataFileStatus.chunks_count} chunks)
                 </div>
               )}
             </div>
@@ -736,7 +730,7 @@ export default function App() {
             <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.75rem" }}>
               <input
                 type="text"
-                placeholder={isRagMode && pdfStatus?.is_indexed ? "Ask about your PDF..." : "Type your message..."}
+                placeholder={isRagMode && dataFileStatus?.is_indexed ? "Ask about your data file..." : "Type your message..."}
                 value={userMessage}
                 onChange={e => setUserMessage(e.target.value)}
                 disabled={loading}

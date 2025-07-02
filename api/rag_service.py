@@ -3,7 +3,7 @@ import tempfile
 import uuid
 from typing import List, Dict, Any
 from fastapi import UploadFile, HTTPException
-from aimakerspace.text_utils import PDFLoader, CharacterTextSplitter
+from aimakerspace.text_utils import TextFileLoader, PDFLoader, CharacterTextSplitter
 from aimakerspace.vectordatabase import VectorDatabase
 from aimakerspace.openai_utils.embedding import EmbeddingModel
 from aimakerspace.openai_utils.chatmodel import ChatOpenAI
@@ -32,31 +32,47 @@ class RAGService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to initialize models: {str(e)}")
     
-    async def upload_and_index_pdf(self, file: UploadFile, api_key: str) -> Dict[str, Any]:
-        """Upload a PDF file and index it for RAG functionality."""
+    async def upload_and_index_data_source(self, file: UploadFile, api_key: str) -> Dict[str, Any]:
+        """Upload a PDF or TXT file and index it for RAG functionality."""
         try:
             # Initialize models if not already done
             if not self.embedding_model:
                 await self.initialize_models(api_key)
             
             # Validate file type
-            if not file.filename or not file.filename.lower().endswith('.pdf'):
-                raise HTTPException(status_code=400, detail="Only PDF files are supported")
+            if not file.filename or \
+                (not file.filename.lower().endswith('.txt') and \
+                 not file.filename.lower().endswith('.pdf')):
+                raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
             
-            # Create a temporary file to store the uploaded PDF
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-                content = await file.read()
-                temp_file.write(content)
-                temp_file_path = temp_file.name
-            
+            if file.filename.lower().endswith('.pdf'):
+                # Create a temporary file to store the uploaded PDF
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                    content = await file.read()
+                    temp_file.write(content)
+                    temp_file_path = temp_file.name
+            elif file.filename.lower().endswith('.txt'):
+                # Create a temporary file to store the uploaded TXT
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as temp_file:
+                    content = await file.read()
+                    temp_file.write(content)
+                    temp_file_path = temp_file.name
+
             try:
-                # Load and extract text from PDF
-                pdf_loader = PDFLoader(temp_file_path)
-                documents = pdf_loader.load_documents()
-                
+
+                if file.filename.lower().endswith('.pdf'):
+                    # Load and extract text from PDF
+                    pdf_loader = PDFLoader(temp_file_path)
+                    documents = pdf_loader.load_documents()
+
+                elif file.filename.lower().endswith('.txt'):
+                    # Load and extract text from TXT
+                    text_loader = TextFileLoader(temp_file_path)
+                    documents = text_loader.load_documents()
+
                 if not documents or not documents[0].strip():
-                    raise HTTPException(status_code=400, detail="Could not extract text from PDF. The file might be empty, corrupted, or contain only images.")
-                
+                    raise HTTPException(status_code=400, detail="Could not extract text from Data Source (TXT, PDF). The file might be empty, corrupted, or contain only images.")
+                    
                 # Split text into chunks
                 text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
                 self.document_chunks = text_splitter.split_texts(documents)
@@ -71,7 +87,7 @@ class RAGService:
                 
                 return {
                     "success": True,
-                    "message": f"PDF indexed successfully. Extracted {len(self.document_chunks)} chunks from {file.filename}",
+                    "message": f"File indexed successfully. Extracted {len(self.document_chunks)} chunks from {file.filename}",
                     "document_id": self.document_id,
                     "chunks_count": len(self.document_chunks)
                 }
@@ -82,14 +98,16 @@ class RAGService:
                     os.unlink(temp_file_path)
                     
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to process Data Source (TXT, PDF): {str(e)}")
+
+
     
-    async def chat_with_pdf(self, user_message: str, api_key: str, system_message: str = "") -> str:
-        """Chat with the indexed PDF using RAG."""
+    async def chat_with_data_sources(self, user_message: str, api_key: str, system_message: str = "") -> str:
+        """Chat with the indexed data source using RAG."""
         try:
-            # Check if PDF is indexed
+            # Check if data source is indexed
             if not self.vector_db or not self.document_chunks:
-                raise HTTPException(status_code=400, detail="No PDF has been indexed. Please upload and index a PDF first.")
+                raise HTTPException(status_code=400, detail="No data source has been indexed. Please upload and index a PDF or TXT file first.")
             
             # Initialize models if not already done
             if not self.chat_model:
@@ -106,7 +124,7 @@ class RAGService:
             if system_message:
                 full_system_message = f"{system_message}\n\nUse the following context to answer the user's question:\n\n{context}"
             else:
-                full_system_message = f"You are a helpful assistant. Use the following context from a PDF document to answer the user's question. If the context doesn't contain enough information to answer the question, say so.\n\nContext:\n{context}"
+                full_system_message = f"You are a helpful assistant. Use the following context from the uploaded document to answer the user's question. If the context doesn't contain enough information to answer the question, say so.\n\nContext:\n{context}"
             
             # Generate response using chat model
             if self.chat_model:
@@ -127,7 +145,7 @@ class RAGService:
             raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
     
     def get_index_status(self) -> Dict[str, Any]:
-        """Get the current status of the PDF indexing."""
+        """Get the current status of the data source indexing."""
         return {
             "is_indexed": self.vector_db is not None,
             "document_id": self.document_id,
