@@ -97,11 +97,10 @@ class RAGService:
             
             # Search for relevant chunks
             search_results = self.vector_db.search_by_text(user_message, k=3, return_as_text=True)  # type: ignore
-            # When return_as_text=True, search_by_text returns List[str], not List[Tuple[str, float]]
-            relevant_chunks = list(search_results) if search_results else []
+            relevant_chunks = search_results if search_results else []
             
             # Create context from relevant chunks
-            context = "\n\n".join(relevant_chunks) if relevant_chunks else ""
+            context = "\n\n".join(relevant_chunks) if relevant_chunks else ""  # type: ignore
             
             # Create the prompt with context
             if system_message:
