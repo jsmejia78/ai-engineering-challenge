@@ -244,6 +244,11 @@ export default function App() {
 
   // Handle Data File selection
   const handleFileChange = (e) => {
+    if (!apiKey.trim()) {
+      setError("Please enter your API key first before selecting a file");
+      return;
+    }
+    
     const file = e.target.files[0];
     if (file && (file.type === "application/pdf" || file.type === "text/plain")) {
       setDataFile(file);
@@ -638,21 +643,24 @@ export default function App() {
                   accept=".pdf,.txt"
                   onChange={handleFileChange}
                   ref={fileInputRef}
+                  disabled={!apiKey.trim()}
                   style={{
                     fontSize: "0.75rem",
-                    maxWidth: "800px"
+                    maxWidth: "800px",
+                    opacity: !apiKey.trim() ? 0.5 : 1,
+                    cursor: !apiKey.trim() ? "not-allowed" : "pointer"
                   }}
                 />
                 <button
                   onClick={uploadDataFile}
-                  disabled={!dataFile || !apiKey || uploadingDataFile}
+                  disabled={!dataFile || !apiKey.trim() || uploadingDataFile}
                   style={{
                     padding: "0.5rem 0.75rem",
-                    background: uploadingDataFile ? "#94a3b8" : "#3b82f6",
+                    background: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "#94a3b8" : "#3b82f6",
                     color: "white",
                     border: "none",
                     borderRadius: "6px",
-                    cursor: uploadingDataFile ? "not-allowed" : "pointer",
+                    cursor: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "not-allowed" : "pointer",
                     fontSize: "0.75rem",
                     fontWeight: "500"
                   }}
@@ -677,6 +685,15 @@ export default function App() {
                   </button>
                 )}
               </div>
+              {!apiKey.trim() && (
+                <div style={{ 
+                  fontSize: "0.7rem", 
+                  color: "#6b7280",
+                  marginTop: "0.5rem"
+                }}>
+                  💡 Enter your API key above to enable file upload
+                </div>
+              )}
               {dataFileStatus?.is_indexed && (
                 <div style={{ 
                   fontSize: "0.7rem", 
