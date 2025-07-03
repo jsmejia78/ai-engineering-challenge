@@ -1179,56 +1179,56 @@ export default function App() {
               >
                 {uploadingDataFile ? "Uploading..." : "Upload"}
               </button>
-              <button
-                onClick={showFileHistoryModal}
-                disabled={fileHistory.length === 0}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  background: fileHistory.length === 0 ? "#94a3b8" : "#6366f1",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: fileHistory.length === 0 ? "not-allowed" : "pointer",
-                  fontSize: "0.75rem",
-                  fontWeight: "500",
-                  opacity: fileHistory.length === 0 ? 0.6 : 1
-                }}
-              >
-                Files List
-              </button>
               {dataFileStatus?.is_indexed && (
-                <>
-                  <button
-                    onClick={() => setShowFileInfoPopup(true)}
-                    style={{
-                      padding: "0.5rem 0.75rem",
-                      background: "#059669",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      fontWeight: "500"
-                    }}
-                  >
-                    View Info
-                  </button>
-                  <button
-                    onClick={clearDataFileIndex}
-                    style={{
-                      padding: "0.5rem 0.75rem",
-                      background: "#ef4444",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      fontWeight: "500"
-                    }}
-                  >
-                    Clear
-                  </button>
-                </>
+                <button
+                  onClick={() => setShowFileInfoPopup(true)}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#059669",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    fontWeight: "500"
+                  }}
+                >
+                  View Info
+                </button>
+              )}
+              {fileHistory.length > 0 && (
+                <button
+                  onClick={showFileHistoryModal}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#6366f1",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    fontWeight: "500"
+                  }}
+                >
+                  Files List
+                </button>
+              )}
+              {dataFileStatus?.is_indexed && (
+                <button
+                  onClick={clearDataFileIndex}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    background: "#ef4444",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    fontWeight: "500"
+                  }}
+                >
+                  Clear
+                </button>
               )}
             </div>
             {!apiKey.trim() && (
