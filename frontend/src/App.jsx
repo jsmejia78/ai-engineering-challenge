@@ -1174,7 +1174,8 @@ export default function App() {
                 disabled={!apiKey.trim()}
                 style={{
                   fontSize: "0.75rem",
-                  maxWidth: "250px",
+                  minWidth: "400px",
+                  maxWidth: "500px",
                   opacity: !apiKey.trim() ? 0.5 : 1,
                   cursor: !apiKey.trim() ? "not-allowed" : "pointer"
                 }}
