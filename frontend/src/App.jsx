@@ -81,10 +81,11 @@ export default function App() {
   const [health, setHealth] = useState(null);
   
   // Data File RAG state
-  const [dataFile, setDataFile] = useState(null);
+  const [dataFiles, setDataFiles] = useState([]);
   const [dataFileStatus, setDataFileStatus] = useState(null);
   const [isRagMode, setIsRagMode] = useState(false);
   const [uploadingDataFile, setUploadingDataFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
   const [showFileInfoPopup, setShowFileInfoPopup] = useState(false);
   const [showFileHistoryPopup, setShowFileHistoryPopup] = useState(false);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
@@ -134,7 +135,7 @@ export default function App() {
         console.log('Initial status check:', data); // Debug log
         setDataFileStatus(data);
         // If there's no actual file selected but backend shows indexed, clear it
-        if (data.is_indexed && !dataFile) {
+        if (data.is_indexed && dataFiles.length === 0) {
           // Clear the backend index since user doesn't have a file selected
           fetch("/api/clear-data-file-index", { method: "DELETE" })
             .then(() => {
@@ -155,7 +156,7 @@ export default function App() {
         setDataFileStatus({ is_indexed: false, chunks_count: 0, file_info: null });
         setIsRagMode(false);
       });
-  }, [dataFile]);
+  }, [dataFiles]);
 
   // Fetch file history on mount
   React.useEffect(() => {
@@ -255,80 +256,109 @@ export default function App() {
   // Handle Data File selection
   const handleFileChange = (e) => {
     if (!apiKey.trim()) {
-      setError("Please enter your API key first before selecting a file");
+      setError("Please enter your API key first before selecting files");
       return;
     }
     
-    const file = e.target.files[0];
-    if (file) {
-      // A file was actually selected
-      if (file.type === "application/pdf" || file.type === "text/plain") {
-        setDataFile(file);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      // Files were actually selected
+      const validFiles = files.filter(file => 
+        file.type === "application/pdf" || file.type === "text/plain"
+      );
+      
+      if (validFiles.length === files.length) {
+        // All files are valid
+        setDataFiles(validFiles);
         setError("");
+      } else if (validFiles.length > 0) {
+        // Some files are valid, some aren't
+        setDataFiles(validFiles);
+        setError(`${files.length - validFiles.length} invalid file(s) skipped. Only PDF and TXT files are supported.`);
       } else {
-        setError("Please select a valid PDF or TXT file");
-        setDataFile(null);
+        // No valid files
+        setError("Please select valid PDF or TXT files");
+        setDataFiles([]);
       }
     }
-    // If no file is selected (user canceled), don't change anything
+    // If no files are selected (user canceled), don't change anything
   };
 
-  // Upload and index Data File
-  const uploadDataFile = async () => {
-    if (!dataFile || !apiKey) {
-      setError("Please select a PDF or TXT file and enter your API key");
+  // Upload and index Data Files (one by one)
+  const uploadDataFiles = async () => {
+    if (dataFiles.length === 0 || !apiKey) {
+      setError("Please select PDF or TXT files and enter your API key");
       return;
     }
 
     setUploadingDataFile(true);
     setError("");
+    setUploadProgress({ current: 0, total: dataFiles.length, fileName: '' });
 
     try {
-      const formData = new FormData();
-      formData.append("file", dataFile);
-      formData.append("api_key", apiKey);
+      for (let i = 0; i < dataFiles.length; i++) {
+        const file = dataFiles[i];
+        setUploadProgress({ current: i + 1, total: dataFiles.length, fileName: file.name });
 
-      const response = await fetch("/api/upload-data-file", {
-        method: "POST",
-        body: formData,
-      });
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", apiKey);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to upload data file");
+        const response = await fetch("/api/upload-data-file", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to upload ${file.name}: ${errorData.detail || "Unknown error"}`);
+        }
+
+        const result = await response.json();
+        console.log('Upload result:', result); // Debug log
+        
+        // Update status with the latest uploaded file
+        setDataFileStatus({
+          is_indexed: true,
+          document_id: result.document_id,
+          chunks_count: result.chunks_count,
+          file_info: result.file_info
+        });
+        setIsRagMode(true);
+        
+        // Immediately update file history for each uploaded file
+        const newHistoryEntry = {
+          document_id: result.document_id,
+          filename: result.file_info.filename,
+          file_type: result.file_info.file_type,
+          file_size: result.file_info.file_size,
+          upload_timestamp: result.file_info.upload_timestamp,
+          chunks_count: result.chunks_count,
+          is_current: i === dataFiles.length - 1 // Only the last file is current
+        };
+        
+        // Mark all previous files as not current and add new file
+        setFileHistory(prev => {
+          const updated = prev.map(file => ({ ...file, is_current: false }));
+          updated.push(newHistoryEntry);
+          return updated;
+        });
       }
 
-      const result = await response.json();
-      console.log('Upload result:', result); // Debug log
-      setDataFileStatus({
-        is_indexed: true,
-        document_id: result.document_id,
-        chunks_count: result.chunks_count,
-        file_info: result.file_info
-      });
-      setIsRagMode(true);
       setError("");
+      setDataFiles([]); // Clear selected files after successful upload
       
-      // Immediately update file history to avoid button lag
-      const newHistoryEntry = {
-        document_id: result.document_id,
-        filename: result.file_info.filename,
-        file_type: result.file_info.file_type,
-        file_size: result.file_info.file_size,
-        upload_timestamp: result.file_info.upload_timestamp,
-        chunks_count: result.chunks_count,
-        is_current: true
-      };
+      // Clear the file input field
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       
-      // Mark all previous files as not current and add new file
-      const updatedHistory = fileHistory.map(file => ({ ...file, is_current: false }));
-      updatedHistory.push(newHistoryEntry);
-      setFileHistory(updatedHistory);
     } catch (err) {
       console.error("Data file upload error:", err);
-      setError(err.message || "Failed to upload data file");
+      setError(err.message || "Failed to upload files");
     } finally {
       setUploadingDataFile(false);
+      setUploadProgress({ current: 0, total: 0, fileName: '' });
     }
   };
 
@@ -337,7 +367,7 @@ export default function App() {
     try {
       await fetch("/api/clear-data-file-index", { method: "DELETE" });
       setDataFileStatus({ is_indexed: false, chunks_count: 0, file_info: null });
-      setDataFile(null);
+      setDataFiles([]);
       setIsRagMode(false);
       setError("");
       
@@ -388,6 +418,35 @@ export default function App() {
   const showFileHistoryModal = () => {
     // No need to fetch again since we maintain local state
     setShowFileHistoryPopup(true);
+  };
+
+  // Get current file info for display (from dataFileStatus or latest from history)
+  const getCurrentFileInfo = () => {
+    if (dataFileStatus?.file_info) {
+      return {
+        filename: dataFileStatus.file_info.filename,
+        file_type: dataFileStatus.file_info.file_type,
+        file_size: dataFileStatus.file_info.file_size,
+        upload_timestamp: dataFileStatus.file_info.upload_timestamp,
+        document_id: dataFileStatus.document_id,
+        chunks_count: dataFileStatus.chunks_count
+      };
+    }
+    
+    // Fallback to latest file from history
+    const currentFile = fileHistory.find(f => f.is_current);
+    if (currentFile) {
+      return {
+        filename: currentFile.filename,
+        file_type: currentFile.file_type,
+        file_size: currentFile.file_size,
+        upload_timestamp: currentFile.upload_timestamp,
+        document_id: currentFile.document_id,
+        chunks_count: currentFile.chunks_count
+      };
+    }
+    
+    return null;
   };
 
   // Handle RAG chat
@@ -795,89 +854,92 @@ export default function App() {
               </button>
             </div>
             
-            {dataFileStatus?.file_info ? (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
+            {(() => {
+              const currentFileInfo = getCurrentFileInfo();
+              return currentFileInfo ? (
                 <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0'
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem'
                 }}>
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 2fr',
-                    gap: '0.75rem',
-                    fontSize: '0.875rem'
+                    padding: '1rem',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0'
                   }}>
-                    <div style={{ fontWeight: '600', color: '#374151' }}>Filename:</div>
-                    <div style={{ color: '#6b7280', wordBreak: 'break-all' }}>
-                      {dataFileStatus.file_info.filename}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 2fr',
+                      gap: '0.75rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      <div style={{ fontWeight: '600', color: '#374151' }}>Filename:</div>
+                      <div style={{ color: '#6b7280', wordBreak: 'break-all' }}>
+                        {currentFileInfo.filename}
+                      </div>
+                      
+                      <div style={{ fontWeight: '600', color: '#374151' }}>File Type:</div>
+                      <div style={{ color: '#6b7280' }}>
+                        {currentFileInfo.file_type}
+                      </div>
+                      
+                      <div style={{ fontWeight: '600', color: '#374151' }}>File Size:</div>
+                      <div style={{ color: '#6b7280' }}>
+                        {formatFileSize(currentFileInfo.file_size)}
+                      </div>
+                      
+                      <div style={{ fontWeight: '600', color: '#374151' }}>Upload Time:</div>
+                      <div style={{ color: '#6b7280' }}>
+                        {formatTimestamp(currentFileInfo.upload_timestamp)}
+                      </div>
+                      
+                      <div style={{ fontWeight: '600', color: '#374151' }}>Document ID:</div>
+                      <div style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                        {currentFileInfo.document_id}
+                      </div>
+                      
+                      <div style={{ fontWeight: '600', color: '#374151' }}>Segments Count:</div>
+                      <div style={{ color: '#6b7280' }}>
+                        {currentFileInfo.chunks_count} segments
+                      </div>
                     </div>
-                    
-                    <div style={{ fontWeight: '600', color: '#374151' }}>File Type:</div>
-                    <div style={{ color: '#6b7280' }}>
-                      {dataFileStatus.file_info.file_type}
+                  </div>
+                  
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: '#f0f9ff',
+                    borderRadius: '8px',
+                    border: '1px solid #bae6fd'
+                  }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#0369a1',
+                      fontWeight: '500'
+                    }}>
+                      💡 RAG Information
                     </div>
-                    
-                    <div style={{ fontWeight: '600', color: '#374151' }}>File Size:</div>
-                    <div style={{ color: '#6b7280' }}>
-                      {formatFileSize(dataFileStatus.file_info.file_size)}
-                    </div>
-                    
-                    <div style={{ fontWeight: '600', color: '#374151' }}>Upload Time:</div>
-                    <div style={{ color: '#6b7280' }}>
-                      {formatTimestamp(dataFileStatus.file_info.upload_timestamp)}
-                    </div>
-                    
-                    <div style={{ fontWeight: '600', color: '#374151' }}>Document ID:</div>
-                    <div style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {dataFileStatus.document_id}
-                    </div>
-                    
-                    <div style={{ fontWeight: '600', color: '#374151' }}>Segments Count:</div>
-                    <div style={{ color: '#6b7280' }}>
-                      {dataFileStatus.chunks_count} segments
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#0284c7',
+                      marginTop: '0.5rem',
+                      lineHeight: '1.4'
+                    }}>
+                      Your document has been processed and split into {currentFileInfo.chunks_count} text segments. 
+                      Each segment contains approximately 1000 characters with 200 characters overlap for context preservation.
                     </div>
                   </div>
                 </div>
-                
+              ) : (
                 <div style={{
-                  padding: '1rem',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '8px',
-                  border: '1px solid #bae6fd'
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#6b7280'
                 }}>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#0369a1',
-                    fontWeight: '500'
-                  }}>
-                    💡 RAG Information
-                  </div>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: '#0284c7',
-                    marginTop: '0.5rem',
-                    lineHeight: '1.4'
-                  }}>
-                    Your document has been processed and split into {dataFileStatus.chunks_count} text segments. 
-                    Each segment contains approximately 1000 characters with 200 characters overlap for context preservation.
-                  </div>
+                  No file information available
                 </div>
-              </div>
-            ) : (
-              <div style={{
-                textAlign: 'center',
-                padding: '2rem',
-                color: '#6b7280'
-              }}>
-                No file information available
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1169,6 +1231,7 @@ export default function App() {
               <input
                 type="file"
                 accept=".pdf,.txt"
+                multiple
                 onChange={handleFileChange}
                 ref={fileInputRef}
                 disabled={!apiKey.trim()}
@@ -1181,71 +1244,75 @@ export default function App() {
                 }}
               />
               <button
-                onClick={uploadDataFile}
-                disabled={!dataFile || !apiKey.trim() || uploadingDataFile}
+                onClick={uploadDataFiles}
+                disabled={dataFiles.length === 0 || !apiKey.trim() || uploadingDataFile}
                 style={{
                   padding: "0.5rem 0.75rem",
-                  background: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "#94a3b8" : "#3b82f6",
+                  background: (dataFiles.length === 0 || !apiKey.trim() || uploadingDataFile) ? "#94a3b8" : "#3b82f6",
                   color: "white",
                   border: "none",
                   borderRadius: "6px",
-                  cursor: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "not-allowed" : "pointer",
+                  cursor: (dataFiles.length === 0 || !apiKey.trim() || uploadingDataFile) ? "not-allowed" : "pointer",
                   fontSize: "0.75rem",
                   fontWeight: "500"
                 }}
               >
-                {uploadingDataFile ? "Uploading..." : "Upload"}
+                {uploadingDataFile ? (
+                  uploadProgress.total > 1 ? 
+                    `Uploading ${uploadProgress.current}/${uploadProgress.total}` : 
+                    "Uploading..."
+                ) : (
+                  dataFiles.length > 1 ? `Upload ${dataFiles.length} Files` : "Upload"
+                )}
               </button>
-              {dataFileStatus?.is_indexed && (
-                <button
-                  onClick={() => setShowFileInfoPopup(true)}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    background: "#059669",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    fontWeight: "500"
-                  }}
-                >
-                  View Info
-                </button>
-              )}
               {fileHistory.length > 0 && (
-                <button
-                  onClick={showFileHistoryModal}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    background: "#6366f1",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    fontWeight: "500"
-                  }}
-                >
-                  Files List
-                </button>
-              )}
-              {dataFileStatus?.is_indexed && (
-                <button
-                  onClick={clearDataFileIndex}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    background: "#ef4444",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "0.75rem",
-                    fontWeight: "500"
-                  }}
-                >
-                  Clear
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowFileInfoPopup(true)}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#059669",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    View Info
+                  </button>
+                  <button
+                    onClick={showFileHistoryModal}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#6366f1",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Files List
+                  </button>
+                  <button
+                    onClick={clearDataFileIndex}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Clear
+                  </button>
+                </>
               )}
             </div>
             {!apiKey.trim() && (
@@ -1255,6 +1322,25 @@ export default function App() {
                 marginTop: "0.5rem"
               }}>
                 💡 Configure your API key in Settings to enable file upload
+              </div>
+            )}
+            {dataFiles.length > 0 && !uploadingDataFile && (
+              <div style={{ 
+                fontSize: "0.7rem", 
+                color: "#374151",
+                marginTop: "0.5rem"
+              }}>
+                📁 {dataFiles.length} file{dataFiles.length > 1 ? 's' : ''} selected: {dataFiles.map(f => f.name).join(', ')}
+              </div>
+            )}
+            {uploadingDataFile && uploadProgress.total > 0 && (
+              <div style={{ 
+                fontSize: "0.7rem", 
+                color: "#3b82f6",
+                marginTop: "0.5rem",
+                fontWeight: "500"
+              }}>
+                ⏳ Uploading {uploadProgress.current}/{uploadProgress.total}: {uploadProgress.fileName}
               </div>
             )}
           </div>
