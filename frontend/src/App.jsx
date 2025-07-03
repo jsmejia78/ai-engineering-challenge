@@ -156,6 +156,11 @@ export default function App() {
       });
   }, [dataFile]);
 
+  // Fetch file history on mount and when files are uploaded/cleared
+  React.useEffect(() => {
+    fetchFileHistory();
+  }, [dataFileStatus]);
+
   // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -323,6 +328,9 @@ export default function App() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      // Refresh file history to update button state
+      await fetchFileHistory();
     } catch (err) {
       console.error("Error clearing data file index:", err);
       setError("Failed to clear data file index");
@@ -754,21 +762,21 @@ export default function App() {
                     border: file.is_current ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                     position: 'relative'
                   }}>
-                    {file.is_current && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '0.5rem',
-                        right: '0.5rem',
-                        background: '#3b82f6',
-                        color: 'white',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}>
-                        Current
-                      </div>
-                    )}
+                                         {file.is_current && (
+                       <div style={{
+                         position: 'absolute',
+                         top: '0.5rem',
+                         right: '0.5rem',
+                         background: '#3b82f6',
+                         color: 'white',
+                         padding: '0.25rem 0.5rem',
+                         borderRadius: '12px',
+                         fontSize: '0.75rem',
+                         fontWeight: '500'
+                       }}>
+                         Latest
+                       </div>
+                     )}
                     
                     <div style={{
                       display: 'grid',
@@ -904,11 +912,14 @@ export default function App() {
               minWidth: "200px"
             }}>
               AI Chat {health && <span title="API Health">{health}</span>}
-              {isRagMode && dataFileStatus?.is_indexed && (
-                <span style={{ fontSize: "0.875rem", marginLeft: "0.5rem", opacity: 0.9 }}>
-                  (RAG Mode)
-                </span>
-              )}
+              <div style={{ 
+                fontSize: "0.875rem", 
+                marginTop: "0.25rem", 
+                opacity: 0.9,
+                fontWeight: "500"
+              }}>
+                {isRagMode && dataFileStatus?.is_indexed ? "RAG Chat Mode" : "Standard Chat Mode"}
+              </div>
             </h1>
             <button 
               onClick={clearConversation}
@@ -1029,15 +1040,17 @@ export default function App() {
                 </button>
                 <button
                   onClick={showFileHistoryModal}
+                  disabled={fileHistory.length === 0}
                   style={{
                     padding: "0.5rem 0.75rem",
-                    background: "#6366f1",
+                    background: fileHistory.length === 0 ? "#94a3b8" : "#6366f1",
                     color: "white",
                     border: "none",
                     borderRadius: "6px",
-                    cursor: "pointer",
+                    cursor: fileHistory.length === 0 ? "not-allowed" : "pointer",
                     fontSize: "0.75rem",
-                    fontWeight: "500"
+                    fontWeight: "500",
+                    opacity: fileHistory.length === 0 ? 0.6 : 1
                   }}
                 >
                   Files List
