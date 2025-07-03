@@ -254,13 +254,17 @@ export default function App() {
     }
     
     const file = e.target.files[0];
-    if (file && (file.type === "application/pdf" || file.type === "text/plain")) {
-      setDataFile(file);
-      setError("");
-    } else {
-      setError("Please select a valid PDF or TXT file");
-      setDataFile(null);
+    if (file) {
+      // A file was actually selected
+      if (file.type === "application/pdf" || file.type === "text/plain") {
+        setDataFile(file);
+        setError("");
+      } else {
+        setError("Please select a valid PDF or TXT file");
+        setDataFile(null);
+      }
     }
+    // If no file is selected (user canceled), don't change anything
   };
 
   // Upload and index Data File
