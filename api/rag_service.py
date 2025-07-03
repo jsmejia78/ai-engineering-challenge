@@ -85,9 +85,11 @@ class RAGService:
                 text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
                 self.document_chunks = text_splitter.split_texts(documents)
                 
-                # Create vector database and index the chunks
+                # if embedding model is initialized, create vector database and index the chunks
                 if self.embedding_model:
-                    self.vector_db = VectorDatabase(self.embedding_model)
+                    if self.vector_db is None:
+                        self.vector_db = VectorDatabase(self.embedding_model)
+                    # index the chunks
                     await self.vector_db.abuild_from_list(self.document_chunks)
                 
                 # Generate a unique document ID
