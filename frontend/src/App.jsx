@@ -157,10 +157,10 @@ export default function App() {
       });
   }, [dataFile]);
 
-  // Fetch file history on mount and when files are uploaded/cleared
+  // Fetch file history on mount
   React.useEffect(() => {
     fetchFileHistory();
-  }, [dataFileStatus]);
+  }, []);
 
   // Handle form submit
   const handleSubmit = async (e) => {
@@ -308,6 +308,22 @@ export default function App() {
       });
       setIsRagMode(true);
       setError("");
+      
+      // Immediately update file history to avoid button lag
+      const newHistoryEntry = {
+        document_id: result.document_id,
+        filename: result.file_info.filename,
+        file_type: result.file_info.file_type,
+        file_size: result.file_info.file_size,
+        upload_timestamp: result.file_info.upload_timestamp,
+        chunks_count: result.chunks_count,
+        is_current: true
+      };
+      
+      // Mark all previous files as not current and add new file
+      const updatedHistory = fileHistory.map(file => ({ ...file, is_current: false }));
+      updatedHistory.push(newHistoryEntry);
+      setFileHistory(updatedHistory);
     } catch (err) {
       console.error("Data file upload error:", err);
       setError(err.message || "Failed to upload data file");
@@ -330,8 +346,8 @@ export default function App() {
         fileInputRef.current.value = '';
       }
       
-      // Refresh file history to update button state
-      await fetchFileHistory();
+      // Immediately clear file history to avoid button lag
+      setFileHistory([]);
     } catch (err) {
       console.error("Error clearing data file index:", err);
       setError("Failed to clear data file index");
@@ -369,8 +385,8 @@ export default function App() {
   };
 
   // Function to show file history popup
-  const showFileHistoryModal = async () => {
-    await fetchFileHistory();
+  const showFileHistoryModal = () => {
+    // No need to fetch again since we maintain local state
     setShowFileHistoryPopup(true);
   };
 
