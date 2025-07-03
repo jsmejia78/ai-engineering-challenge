@@ -25,6 +25,15 @@ class RAGService:
         self.embedding_model = None
         self.document_chunks = []
         self.document_id = None
+        # Store detailed file information
+        self.file_info = {
+            'filename': None,
+            'upload_timestamp': None,
+            'file_type': None,
+            'file_size': None
+        }
+        # Store file history
+        self.file_history = []
         
     async def initialize_models(self, api_key: str):
         """Initialize the embedding and chat models with the provided API key."""
@@ -53,18 +62,33 @@ class RAGService:
                  not file.filename.lower().endswith('.pdf')):
                 raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
             
+            # Store file information
+            import datetime
+            self.file_info = {
+                'filename': file.filename,
+                'upload_timestamp': datetime.datetime.now().isoformat(),
+                'file_type': 'PDF' if file.filename.lower().endswith('.pdf') else 'TXT',
+                'file_size': file.size if hasattr(file, 'size') else None
+            }
+            
             if file.filename.lower().endswith('.pdf'):
                 # Create a temporary file to store the uploaded PDF
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
                     content = await file.read()
                     temp_file.write(content)
                     temp_file_path = temp_file.name
+                    # Update file size if not available
+                    if not self.file_info['file_size']:
+                        self.file_info['file_size'] = len(content)
             elif file.filename.lower().endswith('.txt'):
                 # Create a temporary file to store the uploaded TXT
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as temp_file:
                     content = await file.read()
                     temp_file.write(content)
                     temp_file_path = temp_file.name
+                    # Update file size if not available
+                    if not self.file_info['file_size']:
+                        self.file_info['file_size'] = len(content)
 
             try:
 
@@ -95,11 +119,30 @@ class RAGService:
                 # Generate a unique document ID
                 self.document_id = str(uuid.uuid4())
                 
+                # Add file to history
+                file_history_entry = {
+                    'document_id': self.document_id,
+                    'filename': self.file_info['filename'],
+                    'file_type': self.file_info['file_type'],
+                    'file_size': self.file_info['file_size'],
+                    'upload_timestamp': self.file_info['upload_timestamp'],
+                    'chunks_count': len(self.document_chunks),
+                    'is_current': True
+                }
+                
+                # Mark all previous files as not current
+                for entry in self.file_history:
+                    entry['is_current'] = False
+                
+                # Add new file to history
+                self.file_history.append(file_history_entry)
+                
                 return {
                     "success": True,
                     "message": f"File indexed successfully. Extracted {len(self.document_chunks)} chunks from {file.filename}",
                     "document_id": self.document_id,
-                    "chunks_count": len(self.document_chunks)
+                    "chunks_count": len(self.document_chunks),
+                    "file_info": self.file_info
                 }
                 
             finally:
@@ -197,7 +240,16 @@ class RAGService:
         return {
             "is_indexed": self.vector_db is not None,
             "document_id": self.document_id,
-            "chunks_count": len(self.document_chunks) if self.document_chunks else 0
+            "chunks_count": len(self.document_chunks) if self.document_chunks else 0,
+            "file_info": self.file_info if self.vector_db is not None else None
+        }
+    
+    def get_file_history(self) -> Dict[str, Any]:
+        """Get the history of all uploaded files."""
+        return {
+            "success": True,
+            "file_history": self.file_history,
+            "total_files": len(self.file_history)
         }
     
     def clear_index(self) -> Dict[str, Any]:
@@ -205,7 +257,17 @@ class RAGService:
         self.vector_db = None
         self.document_chunks = []
         self.document_id = None
+        self.file_info = {
+            'filename': None,
+            'upload_timestamp': None,
+            'file_type': None,
+            'file_size': None
+        }
+        # Mark all files in history as not current
+        for entry in self.file_history:
+            entry['is_current'] = False
         # Note: We keep the models initialized to avoid re-initialization overhead
+        # Note: We keep the file history for reference
         return {
             "success": True,
             "message": "Index cleared successfully"

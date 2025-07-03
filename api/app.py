@@ -147,6 +147,15 @@ async def clear_data_file_index():
     
     return rag_service.clear_index()
 
+# Define endpoint to get file history
+@app.get("/api/file-history")
+async def get_file_history():
+    """Get the history of all uploaded files."""
+    if rag_service is None:
+        return {"success": False, "file_history": [], "total_files": 0, "error": "RAG service not available"}
+    
+    return rag_service.get_file_history()
+
 # Define a health check endpoint to verify API status
 @app.get("/api/health")
 async def health_check():
