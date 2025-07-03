@@ -134,8 +134,8 @@ export default function App() {
       .then((data) => {
         console.log('Initial status check:', data); // Debug log
         setDataFileStatus(data);
-        // If there's no actual file selected but backend shows indexed, clear it
-        if (data.is_indexed && dataFiles.length === 0) {
+        // If there's no file history but backend shows indexed, clear it
+        if (data.is_indexed && fileHistory.length === 0) {
           // Clear the backend index since user doesn't have a file selected
           fetch("/api/clear-data-file-index", { method: "DELETE" })
             .then(() => {
@@ -280,8 +280,11 @@ export default function App() {
         setError("Please select valid PDF or TXT files");
         setDataFiles([]);
       }
+    } else {
+      // User canceled file selection - clear any previously selected files
+      setDataFiles([]);
+      setError("");
     }
-    // If no files are selected (user canceled), don't change anything
   };
 
   // Upload and index Data Files (one by one)
