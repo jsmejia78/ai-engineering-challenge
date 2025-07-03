@@ -563,7 +563,8 @@ export default function App() {
             width: '90%',
             maxHeight: '80vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            fontFamily: 'sans-serif'
           }}>
             <div style={{
               display: 'flex',
@@ -695,16 +696,17 @@ export default function App() {
           alignItems: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '12px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-          }}>
+                     <div style={{
+             backgroundColor: 'white',
+             padding: '2rem',
+             borderRadius: '12px',
+             maxWidth: '600px',
+             width: '90%',
+             maxHeight: '80vh',
+             overflowY: 'auto',
+             boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+             fontFamily: 'sans-serif'
+           }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',

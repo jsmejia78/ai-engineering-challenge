@@ -263,14 +263,12 @@ class RAGService:
             'file_type': None,
             'file_size': None
         }
-        # Mark all files in history as not current
-        for entry in self.file_history:
-            entry['is_current'] = False
+        # Clear the file history completely
+        self.file_history = []
         # Note: We keep the models initialized to avoid re-initialization overhead
-        # Note: We keep the file history for reference
         return {
             "success": True,
-            "message": "Index cleared successfully"
+            "message": "Index and file history cleared successfully"
         }
 
 
