@@ -87,6 +87,7 @@ export default function App() {
   const [uploadingDataFile, setUploadingDataFile] = useState(false);
   const [showFileInfoPopup, setShowFileInfoPopup] = useState(false);
   const [showFileHistoryPopup, setShowFileHistoryPopup] = useState(false);
+  const [showSettingsPopup, setShowSettingsPopup] = useState(false);
   const [fileHistory, setFileHistory] = useState([]);
   
   // Ref for auto-scrolling to latest message
@@ -553,6 +554,177 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {/* Settings Popup Modal */}
+      {showSettingsPopup && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            fontFamily: 'sans-serif'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{
+                margin: 0,
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                ⚙️ Settings
+              </h2>
+              <button
+                onClick={() => setShowSettingsPopup(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '0.25rem'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  OpenAI API Key *
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter your OpenAI API Key"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    background: '#fff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  System Message (Optional)
+                </label>
+                <textarea
+                  placeholder="Enter system instructions for the AI..."
+                  value={SystemMessage}
+                  onChange={e => setSystemMessage(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    background: '#fff',
+                    boxSizing: 'border-box',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Model (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="gpt-4.1-mini"
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    background: '#fff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '8px',
+                border: '1px solid #bae6fd'
+              }}>
+                <div style={{
+                  fontSize: '0.875rem',
+                  color: '#0369a1',
+                  fontWeight: '500'
+                }}>
+                  💡 Tips
+                </div>
+                <ul style={{
+                  fontSize: '0.75rem',
+                  color: '#0284c7',
+                  marginTop: '0.5rem',
+                  paddingLeft: '1rem',
+                  lineHeight: '1.4'
+                }}>
+                  <li>API Key is required for all functionality</li>
+                  <li>System Message helps guide AI behavior</li>
+                  <li>Model defaults to gpt-4.1-mini if not specified</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* File Info Popup Modal */}
       {showFileInfoPopup && (
         <div style={{
@@ -921,194 +1093,163 @@ export default function App() {
                 {isRagMode && dataFileStatus?.is_indexed ? "RAG Chat Mode" : "Standard Chat Mode"}
               </div>
             </h1>
-            <button 
-              onClick={clearConversation}
-              style={{
-                padding: "0.5rem 1rem",
-                background: "rgba(255,255,255,0.2)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.3)",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-                fontWeight: "500",
-                transition: "all 0.2s ease",
-                whiteSpace: "nowrap"
-              }}
-              onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
-              onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
-            >
-              Clear Chat
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                onClick={() => setShowSettingsPopup(true)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "rgba(255,255,255,0.2)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                  whiteSpace: "nowrap"
+                }}
+                onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
+                onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
+              >
+                ⚙️ Settings
+              </button>
+              <button 
+                onClick={clearConversation}
+                style={{
+                  padding: "0.5rem 1rem",
+                  background: "rgba(255,255,255,0.2)",
+                  color: "white",
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "500",
+                  transition: "all 0.2s ease",
+                  whiteSpace: "nowrap"
+                }}
+                onMouseOver={(e) => e.target.style.background = "rgba(255,255,255,0.3)"}
+                onMouseOut={(e) => e.target.style.background = "rgba(255,255,255,0.2)"}
+              >
+                Clear Chat
+              </button>
+            </div>
           </div>
 
-          {/* Settings Panel */}
-          <div className="settings-panel" style={{ 
-            padding: "0.75rem 1.5rem", 
-            borderBottom: "1px solid #e1e8ed",
-            background: "#f8fafc",
-            display: "flex",
-            gap: "0.75rem",
-            flexWrap: "wrap",
-            alignItems: "center"
+          {/* Data File Upload Section */}
+          <div style={{ 
+            background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)", 
+            padding: "1rem 1.5rem",
+            borderBottom: "1px solid #e1e8ed"
           }}>
-            <input
-              type="text"
-              placeholder="System message (optional)"
-              value={SystemMessage}
-              onChange={e => setSystemMessage(e.target.value)}
-              style={{ 
-                flex: 1, 
-                minWidth: "200px", 
-                padding: "0.5rem 0.75rem", 
-                border: "1px solid #e2e8f0", 
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                background: "#fff"
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Model (optional)"
-              value={model}
-              onChange={e => setModel(e.target.value)}
-              style={{ 
-                width: "140px", 
-                padding: "0.5rem 0.75rem", 
-                border: "1px solid #e2e8f0", 
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                background: "#fff"
-              }}
-            />
-            <input
-              type="password"
-              placeholder="OpenAI API Key"
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-              style={{ 
-                width: "180px", 
-                padding: "0.5rem 0.75rem", 
-                border: "1px solid #e2e8f0", 
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                background: "#fff"
-              }}
-            />
-            {/* Data File Upload Section */}
+            <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#4338ca", marginBottom: "0.75rem" }}>
+              Data File Upload & RAG
+            </div>
             <div style={{ 
-              background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)", 
-              padding: "1rem 1.5rem",
-              borderBottom: "1px solid #e1e8ed"
+              display: "flex", 
+              alignItems: "center",
+              gap: "0.5rem",
+              flexWrap: "wrap"
             }}>
-              <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#4338ca", marginBottom: "0.75rem" }}>
-                Data File Upload & RAG
-              </div>
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center",
-                gap: "0.5rem"
-              }}>
-                <input
-                  type="file"
-                  accept=".pdf,.txt"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  disabled={!apiKey.trim()}
-                  style={{
-                    fontSize: "0.75rem",
-                    maxWidth: "800px",
-                    opacity: !apiKey.trim() ? 0.5 : 1,
-                    cursor: !apiKey.trim() ? "not-allowed" : "pointer"
-                  }}
-                />
-                <button
-                  onClick={uploadDataFile}
-                  disabled={!dataFile || !apiKey.trim() || uploadingDataFile}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    background: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "#94a3b8" : "#3b82f6",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "not-allowed" : "pointer",
-                    fontSize: "0.75rem",
-                    fontWeight: "500"
-                  }}
-                >
-                  {uploadingDataFile ? "Uploading..." : "Upload"}
-                </button>
-                <button
-                  onClick={showFileHistoryModal}
-                  disabled={fileHistory.length === 0}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    background: fileHistory.length === 0 ? "#94a3b8" : "#6366f1",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: fileHistory.length === 0 ? "not-allowed" : "pointer",
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    opacity: fileHistory.length === 0 ? 0.6 : 1
-                  }}
-                >
-                  Files List
-                </button>
-                {dataFileStatus?.is_indexed && (
-                  <>
-                    <button
-                      onClick={() => setShowFileInfoPopup(true)}
-                      style={{
-                        padding: "0.5rem 0.75rem",
-                        background: "#059669",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: "500"
-                      }}
-                    >
-                      View Info
-                    </button>
-                    <button
-                      onClick={clearDataFileIndex}
-                      style={{
-                        padding: "0.5rem 0.75rem",
-                        background: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        fontWeight: "500"
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-              </div>
-              {!apiKey.trim() && (
-                <div style={{ 
-                  fontSize: "0.7rem", 
-                  color: "#6b7280",
-                  marginTop: "0.5rem"
-                }}>
-                  💡 Enter your API key above to enable file upload
-                </div>
-              )}
-              {dataFileStatus?.is_indexed && (
-                <div style={{ 
-                  fontSize: "0.7rem", 
-                  color: "#059669",
+              <input
+                type="file"
+                accept=".pdf,.txt"
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                disabled={!apiKey.trim()}
+                style={{
+                  fontSize: "0.75rem",
+                  maxWidth: "250px",
+                  opacity: !apiKey.trim() ? 0.5 : 1,
+                  cursor: !apiKey.trim() ? "not-allowed" : "pointer"
+                }}
+              />
+              <button
+                onClick={uploadDataFile}
+                disabled={!dataFile || !apiKey.trim() || uploadingDataFile}
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  background: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "#94a3b8" : "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: (!dataFile || !apiKey.trim() || uploadingDataFile) ? "not-allowed" : "pointer",
+                  fontSize: "0.75rem",
                   fontWeight: "500"
-                }}>
-                  ✓ Data File Indexed ({dataFileStatus.chunks_count} chunks)
-                </div>
+                }}
+              >
+                {uploadingDataFile ? "Uploading..." : "Upload"}
+              </button>
+              <button
+                onClick={showFileHistoryModal}
+                disabled={fileHistory.length === 0}
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  background: fileHistory.length === 0 ? "#94a3b8" : "#6366f1",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: fileHistory.length === 0 ? "not-allowed" : "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: "500",
+                  opacity: fileHistory.length === 0 ? 0.6 : 1
+                }}
+              >
+                Files List
+              </button>
+              {dataFileStatus?.is_indexed && (
+                <>
+                  <button
+                    onClick={() => setShowFileInfoPopup(true)}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#059669",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    View Info
+                  </button>
+                  <button
+                    onClick={clearDataFileIndex}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      background: "#ef4444",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Clear
+                  </button>
+                </>
               )}
             </div>
+            {!apiKey.trim() && (
+              <div style={{ 
+                fontSize: "0.7rem", 
+                color: "#6b7280",
+                marginTop: "0.5rem"
+              }}>
+                💡 Configure your API key in Settings to enable file upload
+              </div>
+            )}
+            {dataFileStatus?.is_indexed && (
+              <div style={{ 
+                fontSize: "0.7rem", 
+                color: "#059669",
+                fontWeight: "500",
+                marginTop: "0.5rem"
+              }}>
+                ✓ Data File Indexed ({dataFileStatus.chunks_count} chunks)
+              </div>
+            )}
           </div>
 
           {/* Chat Messages */}
