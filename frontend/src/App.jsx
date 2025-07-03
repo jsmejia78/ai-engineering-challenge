@@ -1240,16 +1240,6 @@ export default function App() {
                 💡 Configure your API key in Settings to enable file upload
               </div>
             )}
-            {dataFileStatus?.is_indexed && (
-              <div style={{ 
-                fontSize: "0.7rem", 
-                color: "#059669",
-                fontWeight: "500",
-                marginTop: "0.5rem"
-              }}>
-                ✓ Data File Indexed ({dataFileStatus.chunks_count} chunks)
-              </div>
-            )}
           </div>
 
           {/* Chat Messages */}
